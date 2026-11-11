@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field %}
+{% block title %}Register equipment{% endblock %}
+{% block page_title %}Register equipment{% endblock %}
+{% block page_subtitle %}<p>Add a new asset to the inventory. Fields marked with a validator message are required.</p>{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h2>Equipment details</h2>
+    <span class="spacer"></span>
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('equipment.index') }}">Back to inventory</a>
+  </div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {{ form.hidden_tag() }}
+
+      <fieldset>
+        <legend>Identification</legend>
+        <div class="form-grid">
+          {{ field(form.asset_tag, hint="Must be unique, e.g. ICT-019.") }}
+          {{ field(form.equipment_name) }}
+          {{ field(form.equipment_type) }}
+          {{ field(form.serial_number) }}
+          {{ field(form.manufacturer) }}
+          {{ field(form.model) }}
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Assignment and location</legend>
+        <div class="form-grid">
+          {{ field(form.department_id) }}
+          {{ field(form.location) }}
+          {{ field(form.assigned_user_id) }}
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Lifecycle</legend>
+        <div class="form-grid">
+          {{ field(form.purchase_date) }}
+          {{ field(form.warranty_expiry_date, hint="Cannot be earlier than the purchase date.") }}
+          {{ field(form.condition) }}
+          {{ field(form.operational_status) }}
+        </div>
+        {{ field(form.description) }}
+      </fieldset>
+
+      <div class="form-actions">
+        {{ form.submit(class='btn btn-primary') }}
+        <a class="btn btn-ghost" href="{{ url_for('equipment.index') }}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

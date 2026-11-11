@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% from "_macros.html" import empty_state, badge %}
+{% block title %}History · {{ equipment.asset_tag }}{% endblock %}
+{% block page_title %}History · {{ equipment.asset_tag }}{% endblock %}
+{% block page_subtitle %}<p>Every condition and operational-status change recorded for this asset.</p>{% endblock %}
+
+{% block page_actions %}
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('equipment.detail', equipment_id=equipment.id) }}">Back to record</a>
+  <button type="button" class="btn btn-ghost btn-sm" data-print>Print</button>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h2>Status and condition changes</h2>
+    <span class="spacer"></span>
+    {{ badge(equipment.operational_status) }}
+    {{ badge(equipment.condition) }}
+  </div>
+  <div class="card-body tight">
+    {% if status_history %}
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>When</th><th>Changed by</th>
+              <th>Previous condition</th><th>New condition</th>
+              <th>Previous status</th><th>New status</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for entry in status_history %}
+              <tr>
+                <td class="nowrap">{{ entry.changed_at|date_display }}</td>
+                <td>{{ entry.changer.full_name if entry.changer else 'System' }}</td>
+                <td>{{ entry.previous_condition or '—' }}</td>
+                <td>{{ entry.new_condition or '—' }}</td>
+                <td>{{ entry.previous_status or '—' }}</td>
+                <td>{{ entry.new_status or '—' }}</td>
+                <td>{{ entry.change_notes or '—' }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="card-body">
+        {{ empty_state("No status changes have been recorded for this equipment.") }}
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><h2>Audit entries</h2></div>
+  <div class="card-body">
+    {% if audit_entries %}
+      <ul class="timeline">
+        {% for entry in audit_entries %}
+          <li>
+            <span class="tl-title">{{ entry.description }}</span>
+            <time>{{ entry.timestamp|date_display }} · {{ entry.actor }} · {{ entry.action }}</time>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted mb-0">No audit entries recorded.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

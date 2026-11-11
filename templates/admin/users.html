@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, page_links, empty_state, filter_field, stat_card %}
+{% block title %}User accounts{% endblock %}
+{% block page_title %}User accounts{% endblock %}
+{% block page_subtitle %}<p>Create accounts, assign roles and deactivate access. Accounts are never deleted.</p>{% endblock %}
+
+{% block page_actions %}
+  <a class="btn btn-primary btn-sm" href="{{ url_for('admin.create_user') }}">Add user account</a>
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.audit_log') }}">Audit trail</a>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-3 mb-2">
+  {{ stat_card("Administrators", role_counts.get('admin', 0), tone="dark") }}
+  {{ stat_card("ICT officers", role_counts.get('ict_officer', 0), tone="info") }}
+  {{ stat_card("Viewers", role_counts.get('viewer', 0), tone="success") }}
+</div>
+
+<div class="card">
+  <div class="card-header"><h2>Search and filters</h2></div>
+  <div class="card-body">
+    <form method="get" action="{{ url_for('admin.users') }}" data-autosubmit>
+      <div class="filter-bar">
+        <div class="filter-field wide">
+          <label class="filter-label" for="{{ form.search.id }}">{{ form.search.label.text }}</label>
+          {{ form.search(class='form-control form-control-sm') }}
+        </div>
+        {{ filter_field(form.role) }}
+        {{ filter_field(form.status) }}
+        <div class="filter-actions">
+          <button type="submit" class="btn btn-secondary btn-sm">Apply</button>
+          <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.users') }}">Reset</a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2>Accounts</h2>
+    <span class="spacer"></span>
+    <span class="badge badge-info">{{ pagination.total }} account{{ '' if pagination.total == 1 else 's' }}</span>
+    {% if active_filters %}<span class="badge badge-warning">{{ active_filters }} filter{{ '' if active_filters == 1 else 's' }} applied</span>{% endif %}
+  </div>
+
+  {% if users %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr><th>Full name</th><th>Email address</th><th>Role</th><th>Status</th><th>Created</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for user in users %}
+            <tr>
+              <td class="cell-title">{{ user.full_name }}
+                {% if user.id == current_user.id %}<span class="badge badge-info">You</span>{% endif %}
+              </td>
+              <td>{{ user.email }}</td>
+              <td>{{ badge(user.role_label, user.role_label) }}</td>
+              <td>
+                {% if user.is_active %}
+                  <span class="badge badge-success">Active</span>
+                {% else %}
+                  <span class="badge badge-danger">Deactivated</span>
+                {% endif %}
+              </td>
+              <td class="nowrap">{{ user.created_at|date_display }}</td>
+              <td>
+                <div class="table-actions">
+                  <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.edit_user', user_id=user.id) }}">Edit</a>
+                  {% if user.is_active %}
+                    <form method="post" action="{{ url_for('admin.deactivate_user', user_id=user.id) }}" class="inline-form">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="btn btn-ghost btn-sm"
+                              data-confirm="Deactivate the account for {{ user.full_name }}? They will no longer be able to sign in.">
+                        Deactivate
+                      </button>
+                    </form>
+                  {% else %}
+                    <form method="post" action="{{ url_for('admin.activate_user', user_id=user.id) }}" class="inline-form">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="btn btn-ghost btn-sm">Reactivate</button>
+                    </form>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {{ page_links(pagination, 'admin.users', filters) }}
+  {% else %}
+    <div class="card-body">
+      {{ empty_state("No accounts match those filters.", "Clear the filters to see every account.", url_for('admin.users'), "Clear filters") }}
+    </div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <p class="small muted mb-0">
+      <strong>Roles:</strong>
+      <span class="badge badge-dark">Administrator</span> manages users, departments, equipment types and sees the full audit trail.
+      <span class="badge badge-info">ICT Officer</span> registers equipment, records faults and maintenance and manages schedules.
+      <span class="badge badge-success">Viewer</span> has read-only access to records and reports.
+      Deactivated accounts keep their history but cannot sign in or perform any action.
+    </p>
+  </div>
+</div>
+{% endblock %}

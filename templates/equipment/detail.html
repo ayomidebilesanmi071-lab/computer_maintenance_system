@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field, badge, detail_row, empty_state %}
+{% block title %}{{ equipment.asset_tag }}{% endblock %}
+{% block page_title %}{{ equipment.asset_tag }} · {{ equipment.equipment_name }}{% endblock %}
+{% block page_subtitle %}
+  <p>
+    {{ equipment.equipment_type }} ·
+    {{ equipment.department.name if equipment.department else 'No department' }} ·
+    {{ equipment.location or 'Location not recorded' }}
+  </p>
+{% endblock %}
+
+{% block page_actions %}
+  {% if current_user.can(PERMS.equipment_edit) %}
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('equipment.edit', equipment_id=equipment.id) }}">Edit record</a>
+  {% endif %}
+  {% if current_user.can(PERMS.fault_create) %}
+    <a class="btn btn-primary btn-sm" href="{{ url_for('faults.create', equipment_id=equipment.id) }}">Report a fault</a>
+  {% endif %}
+  {% if current_user.can(PERMS.maintenance_create) %}
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('maintenance.create', equipment_id=equipment.id) }}">Record maintenance</a>
+  {% endif %}
+  {% if current_user.can(PERMS.schedule_manage) %}
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('maintenance.create_schedule', equipment_id=equipment.id) }}">Schedule servicing</a>
+  {% endif %}
+  <button type="button" class="btn btn-ghost btn-sm" data-print>Print</button>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-header">
+      <h2>Equipment information</h2>
+      <span class="spacer"></span>
+      {{ badge(equipment.operational_status) }}
+      {{ badge(equipment.condition) }}
+    </div>
+    <div class="card-body">
+      <dl class="detail-list">
+        {{ detail_row("Asset tag", equipment.asset_tag) }}
+        {{ detail_row("Equipment name", equipment.equipment_name) }}
+        {{ detail_row("Equipment type", equipment.equipment_type) }}
+        {{ detail_row("Manufacturer", equipment.manufacturer) }}
+        {{ detail_row("Model", equipment.model) }}
+        {{ detail_row("Serial number", equipment.serial_number) }}
+        {{ detail_row("Department", equipment.department.name if equipment.department else "—") }}
+        {{ detail_row("Physical location", equipment.location) }}
+        {{ detail_row("Assigned user", equipment.assigned_user.full_name if equipment.assigned_user else "Unassigned / shared") }}
+        {{ detail_row("Condition", equipment.condition) }}
+        {{ detail_row("Operational status", equipment.operational_status) }}
+        {{ detail_row("Purchase date", equipment.purchase_date|date_display) }}
+        {{ detail_row("Warranty expiry", equipment.warranty_expiry_date|date_display) }}
+        {{ detail_row("Warranty state", equipment.warranty_status) }}
+        {{ detail_row("Registered by", equipment.registrar.full_name if equipment.registrar else "—") }}
+        {{ detail_row("Registered on", equipment.created_at|date_display) }}
+        {{ detail_row("Last updated", equipment.updated_at|date_display) }}
+        {{ detail_row("Open faults", equipment.open_fault_count ~ " of " ~ (equipment.fault_reports|length) ~ " reported") }}
+        {{ detail_row("Maintenance visits", equipment.maintenance_count) }}
+        {{ detail_row("Last maintenance", equipment.last_maintenance_date|date_display) }}
+      </dl>
+      {% if equipment.description %}
+        <h3 class="mt-2">Description / notes</h3>
+        <p class="mb-0">{{ equipment.description|nl2br }}</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div>
+    {% if current_user.can(PERMS.equipment_status) and not equipment.is_retired %}
+      <div class="card">
+        <div class="card-header"><h2>Update condition &amp; status</h2></div>
+        <div class="card-body">
+          <form method="post" action="{{ url_for('equipment.change_status', equipment_id=equipment.id) }}" novalidate>
+            {{ status_form.hidden_tag() }}
+            {{ field(status_form.condition) }}
+            {{ field(status_form.operational_status) }}
+            {{ field(status_form.notes, hint="Recorded in the status history and the audit log.") }}
+            <div class="form-actions">
+              {{ status_form.submit(class='btn btn-primary btn-sm') }}
+            </div>
+          </form>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if current_user.can(PERMS.equipment_retire) and not equipment.is_retired %}
+      <div class="card">
+        <div class="card-header"><h2>Retire equipment</h2></div>
+        <div class="card-body">
+          <p class="small muted">
+            Retiring keeps every historical record but removes the asset from
+            active use. Records are never deleted.
+          </p>
+          <form method="post" action="{{ url_for('equipment.retire', equipment_id=equipment.id) }}" novalidate>
+            {{ retire_form.hidden_tag() }}
+            {{ field(retire_form.reason) }}
+            {{ field(retire_form.confirm) }}
+            <div class="form-actions">
+              {{ retire_form.submit(class='btn btn-danger btn-sm', **{'data-confirm': 'Retire ' ~ equipment.asset_tag ~ '? This cannot be undone from the interface.'}) }}
+            </div>
+          </form>
+        </div>
+      </div>
+    {% elif equipment.is_retired %}
+      <div class="card">
+        <div class="card-body">
+          <p class="mb-0"><span class="badge badge-dark">Retired</span>
+            This asset is retired and cannot be modified further.</p>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-header">
+        <h2>Status &amp; condition history</h2>
+        <span class="spacer"></span>
+        <a class="btn btn-ghost btn-sm" href="{{ url_for('equipment.history', equipment_id=equipment.id) }}">Full history</a>
+      </div>
+      <div class="card-body">
+        {% if status_history %}
+          <ul class="timeline">
+            {% for entry in status_history[:8] %}
+              <li>
+                <span class="tl-title">{{ entry.change_summary }}</span>
+                <time>{{ entry.changed_at|date_display }} · {{ entry.changer.full_name if entry.changer else 'System' }}</time>
+                {% if entry.change_notes %}<div class="small muted">{{ entry.change_notes }}</div>{% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="muted mb-0">No status changes recorded yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>Fault reports</h2>
+      <span class="spacer"></span>
+      <span class="badge badge-info">{{ fault_reports|length }}</span>
+    </div>
+    <div class="card-body tight">
+      {% if fault_reports %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Reference</th><th>Title</th><th>Category</th><th>Priority</th><th>Status</th><th>Reported</th></tr></thead>
+            <tbody>
+              {% for fault in fault_reports %}
+                <tr>
+                  <td><a href="{{ url_for('faults.detail', fault_id=fault.id) }}">{{ fault.reference_number }}</a></td>
+                  <td>{{ fault.fault_title }}</td>
+                  <td>{{ fault.fault_category }}</td>
+                  <td>{{ badge(fault.priority) }}</td>
+                  <td>{{ badge(fault.status) }}</td>
+                  <td class="nowrap">{{ fault.date_discovered|date_display }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        {{ empty_state("No faults have been reported for this equipment.") }}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>Maintenance history</h2>
+      <span class="spacer"></span>
+      <span class="badge badge-info">{{ maintenance_records|length }}</span>
+    </div>
+    <div class="card-body tight">
+      {% if maintenance_records %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Date</th><th>Type</th><th>Technician</th><th>Work performed</th><th>Outcome</th><th class="num">Cost</th></tr></thead>
+            <tbody>
+              {% for record in maintenance_records %}
+                <tr>
+                  <td class="nowrap"><a href="{{ url_for('maintenance.detail', record_id=record.id) }}">{{ record.maintenance_date|date_display }}</a></td>
+                  <td>{{ record.maintenance_type }}</td>
+                  <td>{{ record.technician_name }}</td>
+                  <td>{{ record.work_performed|truncate(90) }}</td>
+                  <td>{{ badge(record.outcome) }}</td>
+                  <td class="num">{{ record.cost|money }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        {{ empty_state("No maintenance has been recorded for this equipment.") }}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>Preventive schedules</h2>
+      <span class="spacer"></span>
+      <span class="badge badge-info">{{ schedules|length }}</span>
+    </div>
+    <div class="card-body tight">
+      {% if schedules %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Scheduled date</th><th>Type</th><th>Assigned officer</th><th>Status</th><th>Completed</th></tr></thead>
+            <tbody>
+              {% for schedule in schedules %}
+                <tr>
+                  <td class="nowrap"><a href="{{ url_for('maintenance.schedule_detail', schedule_id=schedule.id) }}">{{ schedule.scheduled_date|date_display }}</a></td>
+                  <td>{{ schedule.maintenance_type }}</td>
+                  <td>{{ schedule.assignee_name }}</td>
+                  <td>{{ badge(schedule.status) }}</td>
+                  <td class="nowrap">{{ schedule.completed_at|date_display }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        {{ empty_state("No preventive maintenance is scheduled for this equipment.",
+                       action_url=url_for('maintenance.create_schedule', equipment_id=equipment.id) if current_user.can(PERMS.schedule_manage) else None,
+                       action_label="Schedule servicing") }}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>Audit history for this equipment</h2></div>
+    <div class="card-body">
+      {% if audit_entries %}
+        <ul class="timeline">
+          {% for entry in audit_entries %}
+            <li>
+              <span class="tl-title">{{ entry.description }}</span>
+              <time>{{ entry.timestamp|date_display }} · {{ entry.actor }} · {{ entry.action }}</time>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted mb-0">No audit entries recorded for this equipment.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

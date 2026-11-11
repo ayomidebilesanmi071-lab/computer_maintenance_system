@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field, empty_state %}
+{% block title %}Equipment types{% endblock %}
+{% block page_title %}Equipment types{% endblock %}
+{% block page_subtitle %}<p>The catalogue that populates the equipment-type dropdown when registering assets.</p>{% endblock %}
+
+{% block page_actions %}
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('departments.index') }}">Departments</a>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-header">
+      <h2>Equipment type catalogue</h2>
+      <span class="spacer"></span>
+      <span class="badge badge-info">{{ items|length }} type{{ '' if items|length == 1 else 's' }}</span>
+    </div>
+    <div class="card-body tight">
+      {% if items %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Equipment type</th><th>Description</th><th class="num">Assets</th></tr></thead>
+            <tbody>
+              {% for item in items %}
+                <tr>
+                  <td class="cell-title">{{ item.name }}</td>
+                  <td>{{ item.description or '—' }}</td>
+                  <td class="num">
+                    <a href="{{ url_for('equipment.index', equipment_type=item.name) }}">{{ counts.get(item.name, 0) }}</a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="card-body">
+          {{ empty_state("The equipment type catalogue is empty.") }}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if current_user.can(PERMS.category_manage) %}
+    <div class="card">
+      <div class="card-header"><h2>Add an equipment type</h2></div>
+      <div class="card-body">
+        <p class="small muted">
+          Types added here appear immediately in the equipment registration form.
+          Existing assets keep the type they were registered with.
+        </p>
+        <form method="post" action="{{ url_for('departments.create_category') }}" novalidate>
+          {{ form.hidden_tag() }}
+          {{ field(form.name) }}
+          {{ field(form.description) }}
+          <div class="form-actions">
+            {{ form.submit(class='btn btn-primary btn-sm') }}
+          </div>
+        </form>
+      </div>
+    </div>
+  {% else %}
+    <div class="card">
+      <div class="card-body">
+        <p class="mb-0"><span class="badge badge-info">Read-only</span>
+          Only administrators can change the equipment type catalogue.</p>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, detail_row, empty_state %}
+{% block title %}Maintenance #{{ record.id }}{% endblock %}
+{% block page_title %}Maintenance record #{{ record.id }}{% endblock %}
+{% block page_subtitle %}<p>{{ record.maintenance_type }} · {{ record.equipment.asset_tag }} · {{ record.maintenance_date|date_display }}</p>{% endblock %}
+
+{% block page_actions %}
+  {% if current_user.can(PERMS.maintenance_edit) %}
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('maintenance.edit', record_id=record.id) }}">Edit record</a>
+  {% endif %}
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('maintenance.index') }}">Back to history</a>
+  <button type="button" class="btn btn-ghost btn-sm" data-print>Print</button>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-header">
+      <h2>Maintenance information</h2>
+      <span class="spacer"></span>
+      {{ badge(record.outcome) }}
+    </div>
+    <div class="card-body">
+      <dl class="detail-list">
+        {{ detail_row("Equipment", record.equipment.asset_tag ~ " — " ~ record.equipment.equipment_name) }}
+        {{ detail_row("Equipment type", record.equipment.equipment_type) }}
+        {{ detail_row("Department", record.equipment.department.name if record.equipment.department else "—") }}
+        {{ detail_row("Maintenance type", record.maintenance_type) }}
+        {{ detail_row("Date of maintenance", record.maintenance_date|date_display) }}
+        {{ detail_row("Time on site", record.duration_display) }}
+        {{ detail_row("Technician", record.technician_name) }}
+        {{ detail_row("Parts replaced", record.parts_replaced) }}
+        {{ detail_row("Cost", record.cost|money) }}
+        {{ detail_row("Condition after maintenance", record.condition_after) }}
+        {{ detail_row("Outcome", record.outcome) }}
+        {{ detail_row("Linked fault report", record.fault_report.reference_number if record.fault_report else "—") }}
+        {{ detail_row("Recorded by", record.recorder.full_name if record.recorder else "—") }}
+        {{ detail_row("Recorded on", record.created_at|date_display) }}
+      </dl>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>Diagnosis and work performed</h2></div>
+    <div class="card-body">
+      <h3>Diagnosis</h3>
+      <p>{{ record.diagnosis|nl2br if record.diagnosis else "—" }}</p>
+      <h3>Work performed</h3>
+      <p>{{ record.work_performed|nl2br }}</p>
+      <h3>Additional notes</h3>
+      <p class="mb-0">{{ record.notes|nl2br if record.notes else "—" }}</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>Linked records</h2></div>
+    <div class="card-body">
+      <p>
+        Equipment record:
+        <a href="{{ url_for('equipment.detail', equipment_id=record.equipment.id) }}">{{ record.equipment.asset_tag }}</a>
+      </p>
+      {% if record.fault_report %}
+        <p>
+          Fault report:
+          <a href="{{ url_for('faults.detail', fault_id=record.fault_report.id) }}">{{ record.fault_report.reference_number }}</a>
+          {{ badge(record.fault_report.status) }}
+        </p>
+      {% else %}
+        <p class="muted small">Not linked to a fault report (for example routine preventive servicing).</p>
+      {% endif %}
+      {% if record.schedule %}
+        <p>
+          Preventive schedule:
+          <a href="{{ url_for('maintenance.schedule_detail', schedule_id=record.schedule.id) }}">#{{ record.schedule.id }}</a>
+          {{ badge(record.schedule.status) }}
+        </p>
+      {% endif %}
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('equipment.history', equipment_id=record.equipment.id) }}">Equipment history</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>Audit entries</h2></div>
+    <div class="card-body">
+      {% if audit_entries %}
+        <ul class="timeline">
+          {% for entry in audit_entries %}
+            <li>
+              <span class="tl-title">{{ entry.description }}</span>
+              <time>{{ entry.timestamp|date_display }} · {{ entry.actor }} · {{ entry.action }}</time>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        {{ empty_state("No audit entries recorded for this maintenance record.") }}
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

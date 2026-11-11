@@ -1,0 +1,22 @@
+{# Shared report filter bar.
+   The including template sets ``report_fields`` (a list of form field names)
+   before including this file, so every report shows only the controls that are
+   relevant to it while keeping one consistent layout. #}
+<form method="get" action="{{ request.path }}" data-autosubmit>
+  <div class="filter-bar">
+    {% for field_name in report_fields %}
+      {% set f = form[field_name] %}
+      <div class="filter-field">
+        <label class="filter-label" for="{{ f.id }}">{{ f.label.text }}</label>
+        {{ f(class='form-control form-control-sm') }}
+      </div>
+    {% endfor %}
+    <div class="filter-actions">
+      <button type="submit" class="btn btn-secondary btn-sm">Generate</button>
+      <a class="btn btn-ghost btn-sm" href="{{ request.path }}">Reset</a>
+      {% if current_user.can(PERMS.report_export) %}
+        <button type="submit" name="export" value="csv" class="btn btn-primary btn-sm">Export CSV</button>
+      {% endif %}
+    </div>
+  </div>
+</form>

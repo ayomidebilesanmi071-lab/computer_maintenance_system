@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, empty_state %}
+{% block title %}Equipment inventory report{% endblock %}
+{% block page_title %}Equipment Inventory Report{% endblock %}
+{% block page_subtitle %}<p>Asset tag, equipment, type, department, location, condition and operational status.</p>{% endblock %}
+
+{% block page_actions %}
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('reports.index') }}">All reports</a>
+  <button type="button" class="btn btn-ghost btn-sm" data-print>Print</button>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header"><h2>Report filters</h2></div>
+  <div class="card-body">
+    {% set report_fields = ['date_from', 'date_to', 'department_id', 'equipment_type', 'condition', 'operational_status'] %}
+    {% include "reports/_filter_bar.html" %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body tight">
+    <div class="print-meta">
+      <span><strong>Equipment Inventory Report</strong> — {{ items|length }} record{{ '' if items|length == 1 else 's' }}</span>
+      <span>Generated {{ generated_at|date_display }}</span>
+    </div>
+
+    {% if items %}
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Asset tag</th><th>Equipment name</th><th>Type</th><th>Department</th>
+              <th>Location</th><th>Condition</th><th>Operational status</th>
+              <th>Manufacturer</th><th>Model</th><th>Serial number</th>
+              <th>Purchased</th><th>Warranty expiry</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in items %}
+              <tr>
+                <td class="cell-title">{{ item.asset_tag }}</td>
+                <td>{{ item.equipment_name }}</td>
+                <td>{{ item.equipment_type }}</td>
+                <td>{{ item.department.name if item.department else '—' }}</td>
+                <td>{{ item.location or '—' }}</td>
+                <td>{{ badge(item.condition) }}</td>
+                <td>{{ badge(item.operational_status) }}</td>
+                <td>{{ item.manufacturer or '—' }}</td>
+                <td>{{ item.model or '—' }}</td>
+                <td>{{ item.serial_number or '—' }}</td>
+                <td class="nowrap">{{ item.purchase_date|date_display }}</td>
+                <td class="nowrap">{{ item.warranty_expiry_date|date_display }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      {{ empty_state("No equipment matches the selected filters.",
+                     "Adjust the date range, department or status and generate the report again.") }}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

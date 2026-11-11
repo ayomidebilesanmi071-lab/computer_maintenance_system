@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "_macros.html" import stat_card %}
+{% block title %}Reports{% endblock %}
+{% block page_title %}Reports{% endblock %}
+{% block page_subtitle %}<p>Inventory and maintenance summaries generated from live database records.</p>{% endblock %}
+
+{% block content %}
+<div class="grid grid-4 mb-2">
+  {{ stat_card("Equipment records", totals.total_equipment, href=url_for('reports.equipment_inventory')) }}
+  {{ stat_card("Fault reports", totals.total_faults, hint=totals.open_faults ~ " currently open", tone="danger", href=url_for('reports.fault_summary')) }}
+  {{ stat_card("Maintenance records", totals.total_maintenance, tone="info", href=url_for('reports.maintenance_history')) }}
+  {{ stat_card("Maintenance cost logged", totals.maintenance_cost|money, tone="warning", href=url_for('reports.maintenance_history')) }}
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2>Available reports</h2>
+    <span class="spacer"></span>
+    {% if current_user.can(PERMS.report_export) %}
+      <span class="badge badge-success">CSV export enabled</span>
+    {% else %}
+      <span class="badge badge-secondary">View only — export not permitted for your role</span>
+    {% endif %}
+  </div>
+  <div class="card-body">
+    <div class="grid grid-2">
+      {% for report in reports %}
+        <div class="control-box">
+          <h3>{{ report.icon }} {{ report.title }}</h3>
+          <p class="small muted">{{ report.description }}</p>
+          <a class="btn btn-primary btn-sm" href="{{ url_for(report.endpoint) }}">Open report</a>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <p class="small muted mb-0">
+      Every report supports a date range plus department, equipment-type and
+      status filters where they apply, and each row is read straight from the
+      database when the report is generated — nothing is pre-computed or
+      hard-coded. Reports can be printed using the print button on each page,
+      and exported to CSV where your role permits it.
+    </p>
+  </div>
+</div>
+{% endblock %}

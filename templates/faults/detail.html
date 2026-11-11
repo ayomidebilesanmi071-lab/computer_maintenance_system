@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field, badge, detail_row, empty_state %}
+{% block title %}{{ fault.reference_number }}{% endblock %}
+{% block page_title %}{{ fault.reference_number }} · {{ fault.fault_title }}{% endblock %}
+{% block page_subtitle %}
+  <p>
+    Equipment
+    <a href="{{ url_for('equipment.detail', equipment_id=fault.equipment.id) }}">{{ fault.equipment.asset_tag }}</a>
+    · reported by {{ fault.reporter_name }} on {{ fault.created_at|date_display }}
+  </p>
+{% endblock %}
+
+{% block page_actions %}
+  {% if can_manage %}
+    <a class="btn btn-secondary btn-sm"
+       href="{{ url_for('maintenance.create', equipment_id=fault.equipment_id, fault_report_id=fault.id) }}">Record a repair</a>
+  {% endif %}
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('faults.index') }}">Back to faults</a>
+  <button type="button" class="btn btn-ghost btn-sm" data-print>Print</button>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-header">
+      <h2>Fault information</h2>
+      <span class="spacer"></span>
+      {{ badge(fault.status) }}
+      {{ badge(fault.priority) }}
+    </div>
+    <div class="card-body">
+      <dl class="detail-list">
+        {{ detail_row("Fault reference number", fault.reference_number) }}
+        {{ detail_row("Fault title", fault.fault_title) }}
+        {{ detail_row("Equipment", fault.equipment.asset_tag ~ " — " ~ fault.equipment.equipment_name) }}
+        {{ detail_row("Equipment type", fault.equipment.equipment_type) }}
+        {{ detail_row("Department", fault.equipment.department.name if fault.equipment.department else "—") }}
+        {{ detail_row("Location", fault.equipment.location) }}
+        {{ detail_row("Reporter", fault.reporter_name) }}
+        {{ detail_row("Fault category", fault.fault_category) }}
+        {{ detail_row("Priority", fault.priority) }}
+        {{ detail_row("Assigned ICT officer", fault.assignee_name) }}
+        {{ detail_row("Date reported", fault.created_at|date_display) }}
+        {{ detail_row("Date discovered", fault.date_discovered|date_display) }}
+        {{ detail_row("Current status", fault.status) }}
+        {{ detail_row("Resolved on", fault.resolved_at|date_display) }}
+        {{ detail_row("Days outstanding", fault.days_open) }}
+      </dl>
+
+      <h3 class="mt-2">Fault description</h3>
+      <p>{{ fault.fault_description|nl2br }}</p>
+
+      <h3>Resolution notes</h3>
+      {% if fault.resolution_notes %}
+        <p>{{ fault.resolution_notes|nl2br }}</p>
+      {% else %}
+        <p class="muted">No resolution notes recorded yet.</p>
+      {% endif %}
+
+      {% if fault.has_attachment %}
+        <p class="small">
+          Supporting document:
+          <a href="{{ url_for('faults.attachment', fault_id=fault.id) }}">{{ fault.attachment_filename }}</a>
+        </p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div>
+    {% if can_manage %}
+      <div class="card">
+        <div class="card-header"><h2>Fault controls</h2></div>
+        <div class="card-body">
+          {% if fault.available_transitions() %}
+            <div class="mb-2">
+              <p class="small muted mb-1">Quick actions (only legal next steps are offered):</p>
+              <div class="badge-row">
+                {% for status in fault.available_transitions() %}
+                  <form method="post" action="{{ url_for('faults.change_status', fault_id=fault.id) }}" class="inline-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="status" value="{{ status }}">
+                    {% if status == 'Resolved' %}
+                      <button type="submit" class="btn btn-sm btn-primary"
+                              data-confirm="Resolve {{ fault.reference_number }}? A repair record and resolution notes are required.">
+                        Resolve the fault
+                      </button>
+                    {% elif status == 'Closed' %}
+                      <button type="submit" class="btn btn-sm btn-secondary"
+                              data-confirm="Close {{ fault.reference_number }}? Closed faults cannot be reopened.">
+                        Close the fault
+                      </button>
+                    {% else %}
+                      <button type="submit" class="btn btn-sm btn-ghost">Move to {{ status }}</button>
+                    {% endif %}
+                  </form>
+                {% endfor %}
+              </div>
+            </div>
+          {% else %}
+            <p class="small muted">This fault is closed; no further status changes are possible.</p>
+          {% endif %}
+
+          <details class="mt-2">
+            <summary class="small">Update status with notes</summary>
+            <form method="post" action="{{ url_for('faults.change_status', fault_id=fault.id) }}" novalidate class="mt-1">
+              {{ status_form.hidden_tag() }}
+              {{ field(status_form.status, hint="Only transitions allowed by the fault workflow are listed.") }}
+              {{ field(status_form.resolution_notes) }}
+              <div class="form-actions">
+                {{ status_form.submit(class='btn btn-primary btn-sm') }}
+              </div>
+            </form>
+          </details>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h2>Workflow controls</h2></div>
+        <div class="card-body">
+          <div class="controls-grid">
+            <div class="control-box">
+              <h3>Assign fault</h3>
+              <form method="post" action="{{ url_for('faults.assign', fault_id=fault.id) }}" novalidate>
+                {{ assign_form.hidden_tag() }}
+                {{ field(assign_form.assigned_to) }}
+                {{ field(assign_form.notes) }}
+                {{ assign_form.submit(class='btn btn-primary btn-sm') }}
+              </form>
+            </div>
+
+            <div class="control-box">
+              <h3>Change priority</h3>
+              <form method="post" action="{{ url_for('faults.priority', fault_id=fault.id) }}" novalidate>
+                {{ priority_form.hidden_tag() }}
+                {{ field(priority_form.priority) }}
+                {{ field(priority_form.notes) }}
+                {{ priority_form.submit(class='btn btn-secondary btn-sm') }}
+              </form>
+            </div>
+
+            <div class="control-box">
+              <h3>Add troubleshooting note</h3>
+              <form method="post" action="{{ url_for('faults.add_note', fault_id=fault.id) }}" novalidate>
+                {{ note_form.hidden_tag() }}
+                {{ field(note_form.body) }}
+                {{ note_form.submit(class='btn btn-secondary btn-sm') }}
+              </form>
+            </div>
+
+            <div class="control-box">
+              <h3>Record resolution notes</h3>
+              <form method="post" action="{{ url_for('faults.resolution', fault_id=fault.id) }}" novalidate>
+                {{ resolution_form.hidden_tag() }}
+                {{ field(resolution_form.resolution_notes) }}
+                {{ resolution_form.submit(class='btn btn-secondary btn-sm') }}
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="card">
+        <div class="card-body">
+          <p class="mb-0"><span class="badge badge-info">Read-only</span>
+            Your role can view fault reports but not change them.</p>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-header"><h2>Previous status changes</h2></div>
+      <div class="card-body">
+        {% if status_history %}
+          <ul class="timeline">
+            {% for entry in status_history %}
+              <li>
+                <span class="tl-title">
+                  {% if entry.previous_status %}{{ entry.previous_status }} → {% endif %}{{ entry.new_status }}
+                </span>
+                <time>{{ entry.changed_at|date_display }} · {{ entry.changer.full_name if entry.changer else 'System' }}</time>
+                {% if entry.change_notes %}<div class="small muted">{{ entry.change_notes }}</div>{% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="muted mb-0">No status changes recorded.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>Investigation and troubleshooting notes</h2>
+      <span class="spacer"></span>
+      <span class="badge badge-info">{{ notes_list|length }}</span>
+    </div>
+    <div class="card-body">
+      {% if notes_list %}
+        {% for note in notes_list %}
+          <div class="note-item">
+            <div class="note-meta">{{ note.author.full_name if note.author else 'System' }} · {{ note.created_at|date_display }}</div>
+            <div>{{ note.body|nl2br }}</div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="muted mb-0">No troubleshooting notes have been added yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>Related maintenance records</h2>
+      <span class="spacer"></span>
+      <span class="badge badge-info">{{ maintenance_records|length }}</span>
+    </div>
+    <div class="card-body tight">
+      {% if maintenance_records %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Date</th><th>Type</th><th>Technician</th><th>Work performed</th><th>Outcome</th><th class="num">Cost</th></tr></thead>
+            <tbody>
+              {% for record in maintenance_records %}
+                <tr>
+                  <td class="nowrap"><a href="{{ url_for('maintenance.detail', record_id=record.id) }}">{{ record.maintenance_date|date_display }}</a></td>
+                  <td>{{ record.maintenance_type }}</td>
+                  <td>{{ record.technician_name }}</td>
+                  <td>{{ record.work_performed|truncate(80) }}</td>
+                  <td>{{ badge(record.outcome) }}</td>
+                  <td class="num">{{ record.cost|money }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        {{ empty_state("No repair has been recorded against this fault yet.",
+                       "A repair record must exist before the fault can be resolved.",
+                       url_for('maintenance.create', equipment_id=fault.equipment_id, fault_report_id=fault.id) if can_manage else None,
+                       "Record a repair") }}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>Relevant audit entries</h2></div>
+    <div class="card-body">
+      {% if audit_entries %}
+        <ul class="timeline">
+          {% for entry in audit_entries %}
+            <li>
+              <span class="tl-title">{{ entry.description }}</span>
+              <time>{{ entry.timestamp|date_display }} · {{ entry.actor }} · {{ entry.action }}</time>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted mb-0">No audit entries recorded for this fault.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

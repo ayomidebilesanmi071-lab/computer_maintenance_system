@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field %}
+{% block title %}{{ 'Edit department' if department else 'Add department' }}{% endblock %}
+{% block page_title %}{{ 'Edit ' ~ department.name if department else 'Add department' }}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h2>Department details</h2>
+    <span class="spacer"></span>
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('departments.index') }}">Back to departments</a>
+  </div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {{ form.hidden_tag() }}
+      {{ field(form.name) }}
+      {{ field(form.location) }}
+      {{ field(form.description) }}
+      <div class="form-actions">
+        {{ form.submit(class='btn btn-primary') }}
+        <a class="btn btn-ghost" href="{{ url_for('departments.index') }}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

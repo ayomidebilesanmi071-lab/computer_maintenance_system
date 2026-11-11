@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, empty_state %}
+{% block title %}Fault report summary{% endblock %}
+{% block page_title %}Fault Report Summary{% endblock %}
+{% block page_subtitle %}<p>Fault reference, equipment, category, priority, status, date reported and assigned officer.</p>{% endblock %}
+
+{% block page_actions %}
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('reports.index') }}">All reports</a>
+  <button type="button" class="btn btn-ghost btn-sm" data-print>Print</button>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header"><h2>Report filters</h2></div>
+  <div class="card-body">
+    {% set report_fields = ['date_from', 'date_to', 'fault_status', 'priority', 'fault_category', 'department_id', 'assigned_to'] %}
+    {% include "reports/_filter_bar.html" %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body tight">
+    <div class="print-meta">
+      <span><strong>Fault Report Summary</strong> — {{ items|length }} record{{ '' if items|length == 1 else 's' }}</span>
+      <span>Generated {{ generated_at|date_display }}</span>
+    </div>
+
+    {% if items %}
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Fault reference</th><th>Equipment</th><th>Fault title</th>
+              <th>Category</th><th>Priority</th><th>Status</th>
+              <th>Date reported</th><th>Assigned officer</th><th>Days open</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for fault in items %}
+              <tr>
+                <td class="cell-title">{{ fault.reference_number }}</td>
+                <td>{{ fault.equipment.asset_tag }}<span class="cell-sub">{{ fault.equipment.equipment_name|truncate(34) }}</span></td>
+                <td>{{ fault.fault_title }}</td>
+                <td>{{ fault.fault_category }}</td>
+                <td>{{ badge(fault.priority) }}</td>
+                <td>{{ badge(fault.status) }}</td>
+                <td class="nowrap">{{ fault.date_discovered|date_display }}</td>
+                <td>{{ fault.assignee_name }}</td>
+                <td class="num">{{ fault.days_open }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      {{ empty_state("No faults match the selected filters.") }}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

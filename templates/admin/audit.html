@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% from "_macros.html" import page_links, empty_state, filter_field %}
+{% block title %}Audit trail{% endblock %}
+{% block page_title %}Audit trail{% endblock %}
+{% block page_subtitle %}<p>Who did what, to which record, and when. Entries are append-only and cannot be edited or deleted from the application.</p>{% endblock %}
+
+{% block page_actions %}
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.users') }}">User accounts</a>
+  <button type="button" class="btn btn-ghost btn-sm" data-print>Print</button>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header"><h2>Search and filters</h2></div>
+  <div class="card-body">
+    <form method="get" action="{{ url_for('admin.audit_log') }}" data-autosubmit>
+      <div class="filter-bar">
+        <div class="filter-field wide">
+          <label class="filter-label" for="{{ form.search.id }}">{{ form.search.label.text }}</label>
+          {{ form.search(class='form-control form-control-sm') }}
+        </div>
+        {{ filter_field(form.action) }}
+        {{ filter_field(form.entity_type) }}
+        {{ filter_field(form.user_id) }}
+        {{ filter_field(form.date_from) }}
+        {{ filter_field(form.date_to) }}
+        <div class="filter-actions">
+          <button type="submit" class="btn btn-secondary btn-sm">Apply</button>
+          <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.audit_log') }}">Reset</a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2>Audit entries</h2>
+    <span class="spacer"></span>
+    <span class="badge badge-info">{{ pagination.total }} entr{{ 'y' if pagination.total == 1 else 'ies' }}</span>
+    {% if active_filters %}<span class="badge badge-warning">{{ active_filters }} filter{{ '' if active_filters == 1 else 's' }} applied</span>{% endif %}
+  </div>
+
+  {% if entries %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr><th>Timestamp</th><th>User responsible</th><th>Action</th><th>Entity affected</th><th>Entity ID</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          {% for entry in entries %}
+            <tr>
+              <td class="nowrap">{{ entry.timestamp|date_display }}</td>
+              <td>{{ entry.actor }}</td>
+              <td><span class="badge badge-secondary">{{ entry.action }}</span></td>
+              <td>{{ entry.entity_type }}</td>
+              <td class="num">{{ entry.entity_id if entry.entity_id is not none else '—' }}</td>
+              <td>{{ entry.description }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {{ page_links(pagination, 'admin.audit_log', filters) }}
+  {% else %}
+    <div class="card-body">
+      {% if active_filters %}
+        {{ empty_state("No audit entries match those filters.", "Try clearing a filter.", url_for('admin.audit_log'), "Clear filters") }}
+      {% else %}
+        {{ empty_state("No audit entries have been recorded yet.",
+                       "Signing in, registering equipment, reporting faults and maintenance all create entries here.") }}
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <p class="small muted mb-0">
+      An audit entry is written in the same database transaction as the change it
+      describes, so a business change and its audit record either both succeed or
+      both roll back. Passwords, session cookies and other secrets are never
+      written into audit descriptions.
+    </p>
+  </div>
+</div>
+{% endblock %}

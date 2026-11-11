@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, empty_state, stat_card %}
+{% block title %}Maintenance history report{% endblock %}
+{% block page_title %}Maintenance History Report{% endblock %}
+{% block page_subtitle %}<p>Equipment, maintenance type, date, technician, work performed and outcome.</p>{% endblock %}
+
+{% block page_actions %}
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('reports.index') }}">All reports</a>
+  <button type="button" class="btn btn-ghost btn-sm" data-print>Print</button>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header"><h2>Report filters</h2></div>
+  <div class="card-body">
+    {% set report_fields = ['date_from', 'date_to', 'maintenance_type', 'outcome', 'department_id', 'assigned_to'] %}
+    {% include "reports/_filter_bar.html" %}
+  </div>
+</div>
+
+<div class="grid grid-3 mb-2">
+  {{ stat_card("Records in report", items|length, tone="info") }}
+  {{ stat_card("Total cost logged", total_cost|money, tone="warning") }}
+  {{ stat_card("Successful outcomes", items|selectattr('is_successful')|list|length, tone="success") }}
+</div>
+
+<div class="card">
+  <div class="card-body tight">
+    <div class="print-meta">
+      <span><strong>Maintenance History Report</strong> — {{ items|length }} record{{ '' if items|length == 1 else 's' }}</span>
+      <span>Generated {{ generated_at|date_display }}</span>
+    </div>
+
+    {% if items %}
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Equipment</th><th>Maintenance type</th><th>Date</th><th>Technician</th>
+              <th>Work performed</th><th>Parts replaced</th><th>Outcome</th><th class="num">Cost</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for record in items %}
+              <tr>
+                <td class="cell-title">{{ record.equipment.asset_tag }}<span class="cell-sub">{{ record.equipment.equipment_name|truncate(34) }}</span></td>
+                <td>{{ record.maintenance_type }}</td>
+                <td class="nowrap">{{ record.maintenance_date|date_display }}</td>
+                <td>{{ record.technician_name }}</td>
+                <td>{{ record.work_performed|truncate(110) }}</td>
+                <td>{{ record.parts_replaced or '—' }}</td>
+                <td>{{ badge(record.outcome) }}</td>
+                <td class="num">{{ record.cost|money }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th colspan="7" class="text-right">Total</th>
+              <th class="num">{{ total_cost|money }}</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    {% else %}
+      {{ empty_state("No maintenance records match the selected filters.") }}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% from "_macros.html" import empty_state %}
+{% block title %}Departments{% endblock %}
+{% block page_title %}Departments{% endblock %}
+{% block page_subtitle %}<p>Organisational units that own equipment, with their registered asset counts.</p>{% endblock %}
+
+{% block page_actions %}
+  {% if current_user.can(PERMS.department_manage) %}
+    <a class="btn btn-primary btn-sm" href="{{ url_for('departments.create') }}">Add department</a>
+  {% endif %}
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('departments.categories') }}">Equipment types</a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header"><h2>Search</h2></div>
+  <div class="card-body">
+    <form method="get" action="{{ url_for('departments.index') }}">
+      <div class="filter-bar">
+        <div class="filter-field wide">
+          <label class="filter-label" for="{{ form.search.id }}">{{ form.search.label.text }}</label>
+          {{ form.search(class='form-control form-control-sm') }}
+        </div>
+        <div class="filter-actions">
+          <button type="submit" class="btn btn-secondary btn-sm">Search</button>
+          <a class="btn btn-ghost btn-sm" href="{{ url_for('departments.index') }}">Reset</a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2>Departments</h2>
+    <span class="spacer"></span>
+    <span class="badge badge-info">{{ rows|length }} department{{ '' if rows|length == 1 else 's' }}</span>
+    <span class="badge badge-secondary">{{ total_equipment }} assets in total</span>
+  </div>
+
+  {% if rows %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr><th>Department</th><th>Description</th><th>Usual location</th><th class="num">Equipment</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for department, equipment_count in rows %}
+            <tr>
+              <td class="cell-title">{{ department.name }}</td>
+              <td>{{ department.description or '—' }}</td>
+              <td>{{ department.display_location }}</td>
+              <td class="num">
+                <a href="{{ url_for('equipment.index', department_id=department.id) }}">{{ equipment_count }}</a>
+              </td>
+              <td>
+                <div class="table-actions">
+                  <a class="btn btn-ghost btn-sm" href="{{ url_for('equipment.index', department_id=department.id) }}">View equipment</a>
+                  {% if current_user.can(PERMS.department_manage) %}
+                    <a class="btn btn-ghost btn-sm" href="{{ url_for('departments.edit', department_id=department.id) }}">Edit</a>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="card-body">
+      {% if search %}
+        {{ empty_state("No department matches that search.", "Try a different name or location.", url_for('departments.index'), "Clear search") }}
+      {% else %}
+        {{ empty_state("No departments have been created yet.",
+                       "Departments are needed before equipment can be registered.",
+                       url_for('departments.create') if current_user.can(PERMS.department_manage) else None,
+                       "Add department") }}
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

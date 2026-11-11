@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Dashboard{% endblock %} · CMIMS</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>">
+</head>
+<body class="app">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+
+  <!-- ================= Sidebar ================= -->
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+    <div class="sidebar-brand">
+      <span class="brand-mark">CM</span>
+      <span class="brand-text">
+        <strong>CMIMS</strong>
+        <small>Maintenance &amp; Inventory</small>
+      </span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <p class="nav-section">Overview</p>
+      <a class="nav-link {{ 'active' if request.endpoint == 'dashboard.index' }}"
+         href="{{ url_for('dashboard.index') }}">
+        <span class="nav-icon">▦</span> Dashboard
+      </a>
+
+      <p class="nav-section">Inventory</p>
+      {% if current_user.can(PERMS.equipment_view) %}
+        <a class="nav-link {{ 'active' if request.endpoint in ['equipment.index', 'equipment.detail', 'equipment.history'] }}"
+           href="{{ url_for('equipment.index') }}">
+          <span class="nav-icon">▤</span> Equipment
+        </a>
+      {% endif %}
+      {% if current_user.can(PERMS.equipment_create) %}
+        <a class="nav-link {{ 'active' if request.endpoint == 'equipment.create' }}"
+           href="{{ url_for('equipment.create') }}">
+          <span class="nav-icon">＋</span> Register equipment
+        </a>
+      {% endif %}
+
+      <p class="nav-section">Faults</p>
+      {% if current_user.can(PERMS.fault_view) %}
+        <a class="nav-link {{ 'active' if request.endpoint in ['faults.index', 'faults.detail'] }}"
+           href="{{ url_for('faults.index') }}">
+          <span class="nav-icon">⚠</span> Fault reports
+        </a>
+      {% endif %}
+      {% if current_user.can(PERMS.fault_create) %}
+        <a class="nav-link {{ 'active' if request.endpoint == 'faults.create' }}"
+           href="{{ url_for('faults.create') }}">
+          <span class="nav-icon">＋</span> Report a fault
+        </a>
+      {% endif %}
+
+      <p class="nav-section">Maintenance</p>
+      {% if current_user.can(PERMS.maintenance_view) %}
+        <a class="nav-link {{ 'active' if request.endpoint in ['maintenance.index', 'maintenance.detail', 'maintenance.edit'] }}"
+           href="{{ url_for('maintenance.index') }}">
+          <span class="nav-icon">🛠</span> Maintenance history
+        </a>
+      {% endif %}
+      {% if current_user.can(PERMS.maintenance_create) %}
+        <a class="nav-link {{ 'active' if request.endpoint == 'maintenance.create' }}"
+           href="{{ url_for('maintenance.create') }}">
+          <span class="nav-icon">＋</span> Record maintenance
+        </a>
+      {% endif %}
+      {% if current_user.can(PERMS.schedule_view) %}
+        <a class="nav-link {{ 'active' if request.endpoint in ['maintenance.schedules', 'maintenance.schedule_detail', 'maintenance.create_schedule', 'maintenance.edit_schedule'] }}"
+           href="{{ url_for('maintenance.schedules') }}">
+          <span class="nav-icon">📅</span> Preventive schedules
+        </a>
+      {% endif %}
+
+      <p class="nav-section">Organisation</p>
+      {% if current_user.can(PERMS.equipment_view) %}
+        <a class="nav-link {{ 'active' if request.endpoint in ['departments.index', 'departments.create', 'departments.edit'] }}"
+           href="{{ url_for('departments.index') }}">
+          <span class="nav-icon">🏢</span> Departments
+        </a>
+        <a class="nav-link {{ 'active' if request.endpoint == 'departments.categories' }}"
+           href="{{ url_for('departments.categories') }}">
+          <span class="nav-icon">▥</span> Equipment types
+        </a>
+      {% endif %}
+      {% if current_user.can(PERMS.report_view) %}
+        <a class="nav-link {{ 'active' if request.blueprint == 'reports' }}"
+           href="{{ url_for('reports.index') }}">
+          <span class="nav-icon">📊</span> Reports
+        </a>
+      {% endif %}
+
+      {% if current_user.can(PERMS.user_manage) or current_user.can(PERMS.audit_view) %}
+        <p class="nav-section">Administration</p>
+        {% if current_user.can(PERMS.user_manage) %}
+          <a class="nav-link {{ 'active' if request.endpoint in ['admin.users', 'admin.create_user', 'admin.edit_user'] }}"
+             href="{{ url_for('admin.users') }}">
+            <span class="nav-icon">👥</span> User accounts
+          </a>
+        {% endif %}
+        {% if current_user.can(PERMS.audit_view) %}
+          <a class="nav-link {{ 'active' if request.endpoint == 'admin.audit_log' }}"
+             href="{{ url_for('admin.audit_log') }}">
+            <span class="nav-icon">📜</span> Audit trail
+          </a>
+        {% endif %}
+      {% endif %}
+    </nav>
+
+    <div class="sidebar-footer">
+      <span class="badge badge-info">{{ ROLE_LABELS.get(current_user.role, current_user.role) }}</span>
+      <small>CMIMS v1.0</small>
+    </div>
+  </aside>
+
+  <!-- ================= Main column ================= -->
+  <div class="app-main">
+    <header class="topbar">
+      <button class="icon-btn sidebar-toggle" type="button" data-sidebar-toggle
+              aria-label="Toggle navigation">☰</button>
+
+      <div class="topbar-title">
+        <h1>{% block page_title %}{{ self.title() }}{% endblock %}</h1>
+        {% block page_subtitle %}{% endblock %}
+      </div>
+
+      <div class="topbar-actions">
+        {% block page_actions %}{% endblock %}
+        <div class="user-menu">
+          <div class="user-avatar" aria-hidden="true">
+            {{ (current_user.full_name or '?')[0]|upper }}
+          </div>
+          <div class="user-meta">
+            <strong>{{ current_user.full_name }}</strong>
+            <small>{{ current_user.email }}</small>
+          </div>
+          <a class="btn btn-sm btn-ghost" href="{{ url_for('auth.profile') }}">Profile</a>
+          <form method="post" action="{{ url_for('auth.logout') }}" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-ghost">Sign out</button>
+          </form>
+        </div>
+      </div>
+    </header>
+
+    <main class="content" id="main-content">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-stack">
+            {% for category, message in messages %}
+              <div class="alert alert-{{ 'error' if category in ['error', 'danger'] else category }}"
+                   role="alert">
+                <span class="alert-text">{{ message }}</span>
+                <button type="button" class="alert-close" data-dismiss aria-label="Dismiss">×</button>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="app-footer">
+      <span>Computer Maintenance &amp; Inventory Management System</span>
+      <span>&copy; {{ current_year }}</span>
+    </footer>
+  </div>
+
+  <div class="sidebar-backdrop" data-sidebar-toggle hidden></div>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

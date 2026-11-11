@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% from "_macros.html" import stat_card, bar, badge, empty_state %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Inventory overview{% endblock %}
+{% block page_subtitle %}<p>Read-only summary of the organisation's ICT equipment and faults.</p>{% endblock %}
+
+{% block content %}
+<div class="grid grid-4 mb-2">
+  {{ stat_card("Equipment registered", stats.total_equipment, href=url_for('equipment.index')) }}
+  {{ stat_card("Departments", stats.total_departments, tone="dark", href=url_for('departments.index')) }}
+  {{ stat_card("Open faults", stats.open_faults, hint=stats.resolution_rate ~ "% resolved overall", tone="danger", href=url_for('faults.index')) }}
+  {{ stat_card("Maintenance records", stats.maintenance_count, tone="info", href=url_for('maintenance.index')) }}
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <p class="mb-0">
+      <span class="badge badge-info">Viewer</span>
+      You have read-only access. You can browse equipment, faults, maintenance
+      history, schedules and reports, but you cannot add or change records.
+    </p>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-header"><h2>Equipment condition</h2></div>
+    <div class="card-body">
+      {% set condition_total = equipment_by_condition.values()|sum %}
+      {% if condition_total %}
+        {% for name, count in equipment_by_condition.items() %}
+          {{ bar(name, count, condition_total, 'danger' if name in ['Poor', 'Damaged'] else ('warning' if name == 'Fair' else 'success')) }}
+        {% endfor %}
+      {% else %}
+        <p class="muted mb-0">No equipment has been registered yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>Equipment by type</h2></div>
+    <div class="card-body">
+      {% if equipment_by_type %}
+        {% for name, count in equipment_by_type.items() %}
+          {{ bar(name, count, stats.total_equipment or 1) }}
+        {% endfor %}
+      {% else %}
+        <p class="muted mb-0">Nothing to show yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>Equipment by department</h2>
+      <span class="spacer"></span>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('departments.index') }}">Departments</a>
+    </div>
+    <div class="card-body">
+      {% if equipment_by_department %}
+        {% for name, count in equipment_by_department %}
+          {{ bar(name, count, stats.total_equipment or 1) }}
+        {% endfor %}
+      {% else %}
+        <p class="muted mb-0">Nothing to show yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>Recently reported faults</h2>
+      <span class="spacer"></span>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('faults.index') }}">All faults</a>
+    </div>
+    <div class="card-body tight">
+      {% if open_faults %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Reference</th><th>Equipment</th><th>Priority</th><th>Status</th></tr></thead>
+            <tbody>
+              {% for fault in open_faults %}
+                <tr>
+                  <td><a href="{{ url_for('faults.detail', fault_id=fault.id) }}">{{ fault.reference_number }}</a></td>
+                  <td>{{ fault.equipment.asset_tag }}<span class="cell-sub">{{ fault.fault_title|truncate(38) }}</span></td>
+                  <td>{{ badge(fault.priority) }}</td>
+                  <td>{{ badge(fault.status) }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        {{ empty_state("No faults are currently outstanding.") }}
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

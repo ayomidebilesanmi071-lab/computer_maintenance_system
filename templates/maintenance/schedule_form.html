@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field, badge %}
+{% block title %}{{ 'Edit schedule' if schedule else 'Schedule servicing' }}{% endblock %}
+{% block page_title %}{{ 'Edit schedule #' ~ schedule.id if schedule else 'Schedule servicing' }}{% endblock %}
+{% block page_subtitle %}<p>Plan preventive maintenance for a piece of equipment and assign the responsible ICT officer.</p>{% endblock %}
+
+{% block content %}
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-header">
+      <h2>Schedule details</h2>
+      <span class="spacer"></span>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('maintenance.schedules') }}">Back to schedules</a>
+    </div>
+    <div class="card-body">
+      <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+        {{ field(form.equipment_id) }}
+        <div class="form-grid">
+          {{ field(form.maintenance_type) }}
+          {{ field(form.scheduled_date, hint="A date in the past is flagged as overdue automatically.") }}
+          {{ field(form.assigned_to) }}
+        </div>
+        {{ field(form.instructions, hint="Step-by-step instructions for the officer performing the work.") }}
+        {{ field(form.notes) }}
+        <div class="form-actions">
+          {{ form.submit(class='btn btn-primary') }}
+          <a class="btn btn-ghost" href="{{ url_for('maintenance.schedules') }}">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>Schedule statuses</h2></div>
+    <div class="card-body">
+      <ul class="small muted">
+        <li>{{ badge('Scheduled') }} — planned for a future date.</li>
+        <li>{{ badge('Due') }} — the scheduled date has arrived.</li>
+        <li>{{ badge('Overdue') }} — the scheduled date has passed without completion. This is recalculated automatically from the stored date.</li>
+        <li>{{ badge('In Progress') }} — the officer has started the work.</li>
+        <li>{{ badge('Completed') }} — finished, with a completion date recorded.</li>
+        <li>{{ badge('Cancelled') }} — no longer required.</li>
+      </ul>
+      <p class="small muted mb-0">
+        Completing a schedule can create the matching maintenance record, which
+        keeps the repair history and the schedule in step.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

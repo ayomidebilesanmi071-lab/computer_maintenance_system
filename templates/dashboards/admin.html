@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% from "_macros.html" import stat_card, bar, badge, empty_state %}
+{% block title %}Administrator dashboard{% endblock %}
+{% block page_title %}Administrator dashboard{% endblock %}
+{% block page_subtitle %}<p>Whole-system overview: inventory, faults, maintenance and accounts.</p>{% endblock %}
+
+{% block page_actions %}
+  <a class="btn btn-primary btn-sm" href="{{ url_for('admin.create_user') }}">Add user account</a>
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('reports.index') }}">Reports</a>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-4 mb-2">
+  {{ stat_card("Equipment registered", stats.total_equipment, hint=stats.retired_equipment ~ " retired", href=url_for('equipment.index')) }}
+  {{ stat_card("Open faults", stats.open_faults, hint=stats.resolution_rate ~ "% resolution rate", tone="danger", href=url_for('faults.index')) }}
+  {{ stat_card("Accounts", stats.total_users, hint=stats.active_users ~ " active", tone="info", href=url_for('admin.users')) }}
+  {{ stat_card("Departments", stats.total_departments, hint=category_count ~ " equipment types", tone="dark", href=url_for('departments.index')) }}
+  {{ stat_card("Overdue servicing", stats.overdue_schedules, hint=stats.due_schedules ~ " due within 30 days", tone="warning", href=url_for('maintenance.schedules', status='Overdue')) }}
+  {{ stat_card("Maintenance records", stats.maintenance_count, hint=stats.maintenance_this_month ~ " this month", tone="success", href=url_for('maintenance.index')) }}
+  {{ stat_card("Maintenance cost logged", stats.maintenance_cost|money, tone="info") }}
+  {{ stat_card("Warranty attention", stats.warranty_expiring + stats.warranty_expired, hint=stats.warranty_expired ~ " already expired", tone="warning", href=url_for('equipment.index', warranty='expired')) }}
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-header"><h2>Equipment by department</h2></div>
+    <div class="card-body">
+      {% set dept_total = stats.total_equipment or 1 %}
+      {% if equipment_by_department %}
+        {% for name, count in equipment_by_department %}
+          {{ bar(name, count, dept_total) }}
+        {% endfor %}
+      {% else %}
+        <p class="muted mb-0">No departments have been created yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>Equipment condition</h2></div>
+    <div class="card-body">
+      {% set condition_total = equipment_by_condition.values()|sum %}
+      {% if condition_total %}
+        {% for name, count in equipment_by_condition.items() %}
+          {{ bar(name, count, condition_total, 'danger' if name in ['Poor', 'Damaged'] else ('warning' if name == 'Fair' else 'success')) }}
+        {% endfor %}
+      {% else %}
+        <p class="muted mb-0">No equipment has been registered yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>Open faults requiring attention</h2>
+      <span class="spacer"></span>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('faults.index') }}">All faults</a>
+    </div>
+    <div class="card-body tight">
+      {% if open_faults %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Reference</th><th>Equipment</th><th>Priority</th><th>Status</th><th>Officer</th></tr></thead>
+            <tbody>
+              {% for fault in open_faults %}
+                <tr>
+                  <td><a href="{{ url_for('faults.detail', fault_id=fault.id) }}">{{ fault.reference_number }}</a></td>
+                  <td>{{ fault.equipment.asset_tag }}<span class="cell-sub">{{ fault.equipment.department.name }}</span></td>
+                  <td>{{ badge(fault.priority) }}</td>
+                  <td>{{ badge(fault.status) }}</td>
+                  <td>{{ fault.assignee_name }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        {{ empty_state("No open faults across the organisation.") }}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>Accounts by role</h2></div>
+    <div class="card-body">
+      {% set user_total = role_counts.values()|sum %}
+      {% if user_total %}
+        {% for role, count in role_counts.items() %}
+          {{ bar(ROLE_LABELS.get(role, role), count, user_total, 'dark' if role == 'admin' else 'info') }}
+        {% endfor %}
+      {% else %}
+        <p class="muted mb-0">No accounts exist yet.</p>
+      {% endif %}
+      <a class="btn btn-ghost btn-sm mt-1" href="{{ url_for('admin.users') }}">Manage accounts</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>Faults by status</h2></div>
+    <div class="card-body">
+      {% set fault_total = faults_by_status.values()|sum %}
+      {% if fault_total %}
+        {% for name, count in faults_by_status.items() %}
+          {{ bar(name, count, fault_total) }}
+        {% endfor %}
+      {% else %}
+        <p class="muted mb-0">No faults have been reported.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>Audit trail (latest)</h2>
+      <span class="spacer"></span>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.audit_log') }}">Full audit log</a>
+    </div>
+    <div class="card-body">
+      {% if recent_activity %}
+        <ul class="timeline">
+          {% for entry in recent_activity %}
+            <li>
+              <span class="tl-title">{{ entry.description }}</span>
+              <time>{{ entry.timestamp|date_display }} · {{ entry.actor }} · {{ entry.action }}</time>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted mb-0">No activity recorded yet.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

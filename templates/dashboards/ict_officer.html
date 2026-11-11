@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% from "_macros.html" import stat_card, bar, badge, empty_state %}
+{% block title %}ICT Officer dashboard{% endblock %}
+{% block page_title %}ICT Officer dashboard{% endblock %}
+{% block page_subtitle %}<p>Equipment condition, outstanding faults and scheduled servicing.</p>{% endblock %}
+
+{% block page_actions %}
+  <a class="btn btn-primary btn-sm" href="{{ url_for('faults.create') }}">Report a fault</a>
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('maintenance.create') }}">Record maintenance</a>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-4 mb-2">
+  {{ stat_card("Equipment registered", stats.total_equipment, href=url_for('equipment.index')) }}
+  {{ stat_card("Open faults", stats.open_faults, hint=stats.unassigned_faults ~ " unassigned", tone="danger", href=url_for('faults.index', status='Reported')) }}
+  {{ stat_card("Overdue servicing", stats.overdue_schedules, hint=stats.due_schedules ~ " due within 30 days", tone="warning", href=url_for('maintenance.schedules', status='Overdue')) }}
+  {{ stat_card("Maintenance this month", stats.maintenance_this_month, hint=stats.maintenance_count ~ " records in total", tone="info", href=url_for('maintenance.index')) }}
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-header">
+      <h2>Open fault queue</h2>
+      <span class="spacer"></span>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('faults.index') }}">All faults</a>
+    </div>
+    <div class="card-body tight">
+      {% if open_faults %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr><th>Reference</th><th>Equipment</th><th>Priority</th><th>Status</th><th>Officer</th></tr>
+            </thead>
+            <tbody>
+              {% for fault in open_faults %}
+                <tr>
+                  <td><a href="{{ url_for('faults.detail', fault_id=fault.id) }}">{{ fault.reference_number }}</a></td>
+                  <td>{{ fault.equipment.asset_tag }}<span class="cell-sub">{{ fault.fault_title|truncate(40) }}</span></td>
+                  <td>{{ badge(fault.priority) }}</td>
+                  <td>{{ badge(fault.status) }}</td>
+                  <td>{{ fault.assignee_name }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        {{ empty_state("No open faults. Everything reported has been resolved.", "New faults will appear here as soon as they are recorded.") }}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>Scheduled servicing (next 30 days)</h2>
+      <span class="spacer"></span>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('maintenance.schedules') }}">All schedules</a>
+    </div>
+    <div class="card-body tight">
+      {% if upcoming_schedules %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Equipment</th><th>Type</th><th>Scheduled</th><th>Status</th></tr></thead>
+            <tbody>
+              {% for schedule in upcoming_schedules %}
+                <tr>
+                  <td><a href="{{ url_for('maintenance.schedule_detail', schedule_id=schedule.id) }}">{{ schedule.equipment.asset_tag }}</a>
+                    <span class="cell-sub">{{ schedule.equipment.equipment_name|truncate(34) }}</span>
+                  </td>
+                  <td>{{ schedule.maintenance_type }}</td>
+                  <td class="nowrap">{{ schedule.scheduled_date|date_display }}</td>
+                  <td>{{ badge(schedule.status) }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        {{ empty_state("No servicing is due in the next 30 days.") }}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>Equipment by operational status</h2></div>
+    <div class="card-body">
+      {% set status_total = equipment_by_status.values()|sum %}
+      {% for name, count in equipment_by_status.items() %}
+        {% if count %}
+          {{ bar(name, count, status_total, 'danger' if name in ['Faulty', 'Damaged'] else ('warning' if name == 'Under Maintenance' else 'primary')) }}
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>Faults by priority and category</h2></div>
+    <div class="card-body">
+      {% set priority_total = faults_by_priority.values()|sum %}
+      {% if priority_total %}
+        {% for name, count in faults_by_priority.items() %}
+          {{ bar(name, count, priority_total, 'danger' if name == 'Critical' else ('warning' if name == 'High' else 'info')) }}
+        {% endfor %}
+      {% else %}
+        <p class="muted mb-0">No faults have been reported yet.</p>
+      {% endif %}
+
+      {% if faults_by_category %}
+        <h3 class="mt-2">By category</h3>
+        {% for name, count in faults_by_category.items() %}
+          {{ bar(name, count, faults_by_category.values()|sum) }}
+        {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>Repairs and servicing trend</h2></div>
+    <div class="card-body">
+      <div class="spark">
+        {% set fault_max = (trend.faults|max) or 1 %}
+        {% set maint_max = (trend.maintenance|max) or 1 %}
+        {% set scale = [fault_max, maint_max]|max %}
+        {% for label in trend.labels %}
+          {% set index = loop.index0 %}
+          <div class="spark-col">
+            <div class="spark-bars">
+              <span class="spark-bar" style="height: {{ (trend.faults[index] / scale * 100)|round(1) }}%" title="{{ trend.faults[index] }} faults"></span>
+              <span class="spark-bar alt" style="height: {{ (trend.maintenance[index] / scale * 100)|round(1) }}%" title="{{ trend.maintenance[index] }} maintenance records"></span>
+            </div>
+            <span class="spark-label">{{ label }}</span>
+          </div>
+        {% endfor %}
+      </div>
+      <div class="legend mt-1">
+        <span class="legend-item"><span class="legend-swatch"></span> Faults reported</span>
+        <span class="legend-item"><span class="legend-swatch alt"></span> Maintenance performed</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>Warranty watchlist</h2></div>
+    <div class="card-body tight">
+      {% if warranty_watchlist %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Asset</th><th>Equipment</th><th>Warranty expires</th><th>State</th></tr></thead>
+            <tbody>
+              {% for item in warranty_watchlist %}
+                <tr>
+                  <td><a href="{{ url_for('equipment.detail', equipment_id=item.id) }}">{{ item.asset_tag }}</a></td>
+                  <td>{{ item.equipment_name|truncate(36) }}</td>
+                  <td class="nowrap">{{ item.warranty_expiry_date|date_display }}</td>
+                  <td>{{ badge(item.warranty_status, item.warranty_status) }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        {{ empty_state("No warranties are close to expiring.") }}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>Recent activity</h2></div>
+    <div class="card-body">
+      {% if recent_activity %}
+        <ul class="timeline">
+          {% for entry in recent_activity %}
+            <li>
+              <span class="tl-title">{{ entry.description }}</span>
+              <time>{{ entry.timestamp|date_display }} · {{ entry.actor }}</time>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted mb-0">No activity recorded yet.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

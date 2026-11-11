@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Not found{% endblock %}
+
+{% block content %}
+<div class="card error-page">
+  <div class="card-body">
+    <div class="error-code">404</div>
+    <h2>Record or page not found</h2>
+    <p class="muted">
+      The page or record you asked for does not exist, or it may have been
+      removed. Check the address, or use the navigation to find what you need.
+    </p>
+    <a class="btn btn-primary" href="{{ url_for('dashboard.index') }}">Back to dashboard</a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field %}
+{% block title %}Record maintenance{% endblock %}
+{% block page_title %}Record maintenance{% endblock %}
+{% block page_subtitle %}<p>Document the work carried out on an asset. The equipment's status and condition are updated automatically where the outcome requires it.</p>{% endblock %}
+
+{% block content %}
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-header">
+      <h2>Maintenance details</h2>
+      <span class="spacer"></span>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('maintenance.index') }}">Back to history</a>
+    </div>
+    <div class="card-body">
+      <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+
+        <fieldset>
+          <legend>Equipment and link</legend>
+          <div class="form-grid">
+            {{ field(form.equipment_id) }}
+            {{ field(form.fault_report_id, hint="Link the repair to the fault report it resolves, so the fault can be closed afterwards.") }}
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Work performed</legend>
+          <div class="form-grid">
+            {{ field(form.maintenance_type) }}
+            {{ field(form.maintenance_date) }}
+            {{ field(form.technician_id) }}
+            {{ field(form.start_time) }}
+            {{ field(form.completion_time) }}
+            {{ field(form.condition_after) }}
+          </div>
+          {{ field(form.diagnosis) }}
+          {{ field(form.work_performed) }}
+          <div class="form-grid">
+            {{ field(form.parts_replaced) }}
+            {{ field(form.cost) }}
+            {{ field(form.outcome) }}
+          </div>
+          {{ field(form.notes) }}
+        </fieldset>
+
+        <div class="form-actions">
+          {{ form.submit(class='btn btn-primary') }}
+          <a class="btn btn-ghost" href="{{ url_for('maintenance.index') }}">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>How outcomes affect the asset</h2></div>
+    <div class="card-body">
+      <ul class="small muted">
+        <li><strong>Completed - Equipment Working</strong> → the asset returns to <span class="badge badge-info">In Use</span>.</li>
+        <li><strong>Completed - Equipment Not Fully Working</strong> → the asset is marked <span class="badge badge-danger">Faulty</span>.</li>
+        <li><strong>Unsuccessful - Fault Persists</strong> → the asset stays <span class="badge badge-danger">Faulty</span>.</li>
+        <li><strong>Deferred - Awaiting Parts</strong> → the asset is marked <span class="badge badge-warning">Under Maintenance</span>.</li>
+      </ul>
+      <p class="small muted mb-0">
+        Retired equipment is never moved back into service automatically.
+        Every maintenance entry, condition change and status change is written
+        to the audit trail in the same database transaction.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

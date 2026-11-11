@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Something went wrong{% endblock %}
+
+{% block content %}
+<div class="card error-page">
+  <div class="card-body">
+    <div class="error-code">500</div>
+    <h2>Something went wrong</h2>
+    <p class="muted">
+      The system could not complete that action. The problem has been logged.
+      Please try again, and if it keeps happening contact your ICT
+      administrator.
+    </p>
+    <p class="small muted">No technical details are shown here for security reasons.</p>
+    <a class="btn btn-primary" href="{{ url_for('dashboard.index') }}">Back to dashboard</a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · CMIMS</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="auth-shell">
+  <div class="auth-card">
+    <div class="auth-head">
+      <span class="brand-mark">CM</span>
+      <h1>Computer Maintenance &amp;<br>Inventory Management System</h1>
+      <p>Sign in with your CMIMS account to continue.</p>
+    </div>
+
+    <div class="auth-body">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-stack">
+            {% for category, message in messages %}
+              <div class="alert alert-{{ 'error' if category in ['error', 'danger'] else category }}">
+                <span class="alert-text">{{ message }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+
+        <div class="form-group {{ 'has-error' if form.email.errors }}">
+          {{ form.email.label(class='form-label') }}
+          {{ form.email(class='form-control') }}
+          {% for error in form.email.errors %}<small class="form-error">{{ error }}</small>{% endfor %}
+        </div>
+
+        <div class="form-group {{ 'has-error' if form.password.errors }}">
+          {{ form.password.label(class='form-label') }}
+          {{ form.password(class='form-control') }}
+          {% for error in form.password.errors %}<small class="form-error">{{ error }}</small>{% endfor %}
+        </div>
+
+        <div class="form-group">
+          <label class="checkbox">
+            {{ form.remember(class='form-checkbox') }}
+            <span>{{ form.remember.label.text }}</span>
+          </label>
+        </div>
+
+        {{ form.submit(class='btn btn-primary btn-block') }}
+      </form>
+    </div>
+
+    <div class="auth-foot">
+      Development accounts are documented in the project README —
+      change these passwords before deploying.
+    </div>
+  </div>
+</body>
+</html>

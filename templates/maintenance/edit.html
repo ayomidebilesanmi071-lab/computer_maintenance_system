@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field %}
+{% block title %}Edit maintenance record{% endblock %}
+{% block page_title %}Edit maintenance record #{{ record.id }}{% endblock %}
+{% block page_subtitle %}<p>{{ record.equipment.asset_tag }} · {{ record.maintenance_date|date_display }}</p>{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h2>Maintenance details</h2>
+    <span class="spacer"></span>
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('maintenance.detail', record_id=record.id) }}">Back to record</a>
+  </div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {{ form.hidden_tag() }}
+
+      <fieldset>
+        <legend>Equipment and link</legend>
+        <div class="form-grid">
+          {{ field(form.equipment_id) }}
+          {{ field(form.fault_report_id) }}
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Work performed</legend>
+        <div class="form-grid">
+          {{ field(form.maintenance_type) }}
+          {{ field(form.maintenance_date) }}
+          {{ field(form.technician_id) }}
+          {{ field(form.start_time) }}
+          {{ field(form.completion_time) }}
+          {{ field(form.condition_after) }}
+        </div>
+        {{ field(form.diagnosis) }}
+        {{ field(form.work_performed) }}
+        <div class="form-grid">
+          {{ field(form.parts_replaced) }}
+          {{ field(form.cost) }}
+          {{ field(form.outcome) }}
+        </div>
+        {{ field(form.notes) }}
+      </fieldset>
+
+      <div class="form-actions">
+        {{ form.submit(class='btn btn-primary') }}
+        <a class="btn btn-ghost" href="{{ url_for('maintenance.detail', record_id=record.id) }}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

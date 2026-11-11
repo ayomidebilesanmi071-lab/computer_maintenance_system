@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, empty_state, stat_card %}
+{% block title %}Preventive maintenance report{% endblock %}
+{% block page_title %}Preventive Maintenance Report{% endblock %}
+{% block page_subtitle %}<p>Equipment, scheduled date, assigned officer, schedule status and completion date.</p>{% endblock %}
+
+{% block page_actions %}
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('reports.index') }}">All reports</a>
+  <button type="button" class="btn btn-ghost btn-sm" data-print>Print</button>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header"><h2>Report filters</h2></div>
+  <div class="card-body">
+    {% set report_fields = ['date_from', 'date_to', 'schedule_status', 'department_id', 'assigned_to'] %}
+    {% include "reports/_filter_bar.html" %}
+  </div>
+</div>
+
+<div class="grid grid-3 mb-2">
+  {{ stat_card("Schedules in report", items|length, tone="info") }}
+  {{ stat_card("Completed", items|selectattr('is_completed')|list|length, tone="success") }}
+  {{ stat_card("Outstanding",
+        items|rejectattr('is_completed')|list|length,
+        hint="Scheduled, due, overdue or in progress", tone="warning") }}
+</div>
+
+<div class="card">
+  <div class="card-body tight">
+    <div class="print-meta">
+      <span><strong>Preventive Maintenance Report</strong> — {{ items|length }} record{{ '' if items|length == 1 else 's' }}</span>
+      <span>Generated {{ generated_at|date_display }}</span>
+    </div>
+
+    {% if items %}
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Equipment</th><th>Maintenance type</th><th>Scheduled date</th>
+              <th>Assigned officer</th><th>Schedule status</th><th>Completion date</th><th>Instructions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for schedule in items %}
+              <tr>
+                <td class="cell-title">{{ schedule.equipment.asset_tag }}<span class="cell-sub">{{ schedule.equipment.equipment_name|truncate(34) }}</span></td>
+                <td>{{ schedule.maintenance_type }}</td>
+                <td class="nowrap">{{ schedule.scheduled_date|date_display }}</td>
+                <td>{{ schedule.assignee_name }}</td>
+                <td>{{ badge(schedule.status) }}</td>
+                <td class="nowrap">{{ schedule.completed_at|date_display }}</td>
+                <td>{{ schedule.instructions|truncate(70) if schedule.instructions else '—' }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      {{ empty_state("No preventive-maintenance schedules match the selected filters.") }}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

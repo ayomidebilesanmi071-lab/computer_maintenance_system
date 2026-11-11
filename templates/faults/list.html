@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, page_links, empty_state, filter_field %}
+{% block title %}Fault reports{% endblock %}
+{% block page_title %}Fault reports{% endblock %}
+{% block page_subtitle %}<p>Every fault reported against the organisation's equipment.</p>{% endblock %}
+
+{% block page_actions %}
+  {% if current_user.can(PERMS.fault_create) %}
+    <a class="btn btn-primary btn-sm" href="{{ url_for('faults.create') }}">Report a fault</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header"><h2>Search and filters</h2></div>
+  <div class="card-body">
+    <form method="get" action="{{ url_for('faults.index') }}" data-autosubmit>
+      <div class="filter-bar">
+        <div class="filter-field wide">
+          <label class="filter-label" for="{{ form.search.id }}">{{ form.search.label.text }}</label>
+          {{ form.search(class='form-control form-control-sm') }}
+        </div>
+        {{ filter_field(form.status) }}
+        {{ filter_field(form.priority) }}
+        {{ filter_field(form.fault_category) }}
+        {{ filter_field(form.department_id) }}
+        {{ filter_field(form.assigned_to) }}
+        {{ filter_field(form.date_from) }}
+        {{ filter_field(form.date_to) }}
+        <div class="filter-actions">
+          <button type="submit" class="btn btn-secondary btn-sm">Apply</button>
+          <a class="btn btn-ghost btn-sm" href="{{ url_for('faults.index') }}">Reset</a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2>Results</h2>
+    <span class="spacer"></span>
+    <span class="badge badge-info">{{ pagination.total }} record{{ '' if pagination.total == 1 else 's' }}</span>
+    {% if active_filters %}<span class="badge badge-warning">{{ active_filters }} filter{{ '' if active_filters == 1 else 's' }} applied</span>{% endif %}
+  </div>
+
+  {% if fault_reports %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Reference</th>
+            <th>Fault</th>
+            <th>Equipment</th>
+            <th>Category</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Officer</th>
+            <th>Reported</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for fault in fault_reports %}
+            <tr>
+              <td class="cell-title"><a href="{{ url_for('faults.detail', fault_id=fault.id) }}">{{ fault.reference_number }}</a></td>
+              <td>{{ fault.fault_title }}
+                <span class="cell-sub">Reported by {{ fault.reporter_name }}</span>
+              </td>
+              <td>
+                <a href="{{ url_for('equipment.detail', equipment_id=fault.equipment.id) }}">{{ fault.equipment.asset_tag }}</a>
+                <span class="cell-sub">{{ fault.equipment.equipment_name|truncate(34) }}</span>
+              </td>
+              <td>{{ fault.fault_category }}</td>
+              <td>{{ badge(fault.priority) }}</td>
+              <td>{{ badge(fault.status) }}</td>
+              <td>{{ fault.assignee_name }}</td>
+              <td class="nowrap">{{ fault.date_discovered|date_display }}
+                <span class="cell-sub">{{ fault.days_open }} day{{ '' if fault.days_open == 1 else 's' }} old</span>
+              </td>
+              <td>
+                <a class="btn btn-ghost btn-sm" href="{{ url_for('faults.detail', fault_id=fault.id) }}">Open</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {{ page_links(pagination, 'faults.index', filters) }}
+  {% else %}
+    <div class="card-body">
+      {% if active_filters %}
+        {{ empty_state("No fault reports match those filters.",
+                       "Try clearing a filter or widening the date range.",
+                       url_for('faults.index'), "Clear filters") }}
+      {% else %}
+        {{ empty_state("No faults have been reported.",
+                       "Faults reported against equipment will appear here.",
+                       url_for('faults.create') if current_user.can(PERMS.fault_create) else None,
+                       "Report a fault") }}
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

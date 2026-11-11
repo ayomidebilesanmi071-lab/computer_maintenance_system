@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Access denied{% endblock %}
+
+{% block content %}
+<div class="card error-page">
+  <div class="card-body">
+    <div class="error-code">403</div>
+    <h2>Access denied</h2>
+    <p class="muted">
+      Your account does not have permission to view this page or perform that
+      action. If you believe you should have access, please contact an
+      administrator.
+    </p>
+    <a class="btn btn-primary" href="{{ url_for('dashboard.index') }}">Back to dashboard</a>
+  </div>
+</div>
+{% endblock %}

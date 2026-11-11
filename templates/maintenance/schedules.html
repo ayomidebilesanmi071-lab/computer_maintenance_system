@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, page_links, empty_state, filter_field %}
+{% block title %}Preventive schedules{% endblock %}
+{% block page_title %}Preventive maintenance schedules{% endblock %}
+{% block page_subtitle %}<p>Planned servicing with its responsible officer, status and completion date.</p>{% endblock %}
+
+{% block page_actions %}
+  {% if current_user.can(PERMS.schedule_manage) %}
+    <a class="btn btn-primary btn-sm" href="{{ url_for('maintenance.create_schedule') }}">Schedule servicing</a>
+  {% endif %}
+  {% if current_user.can(PERMS.report_view) %}
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('reports.preventive_schedule') }}">Preventive report</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+{% if due_soon %}
+  <div class="card">
+    <div class="card-header"><h2>Due within 14 days (including overdue)</h2></div>
+    <div class="card-body tight">
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Equipment</th><th>Type</th><th>Scheduled</th><th>Officer</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            {% for schedule in due_soon %}
+              <tr>
+                <td>{{ schedule.equipment.asset_tag }}<span class="cell-sub">{{ schedule.equipment.equipment_name|truncate(32) }}</span></td>
+                <td>{{ schedule.maintenance_type }}</td>
+                <td class="nowrap">{{ schedule.scheduled_date|date_display }}</td>
+                <td>{{ schedule.assignee_name }}</td>
+                <td>{{ badge(schedule.status) }}</td>
+                <td><a class="btn btn-ghost btn-sm" href="{{ url_for('maintenance.schedule_detail', schedule_id=schedule.id) }}">Open</a></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header"><h2>Search and filters</h2></div>
+  <div class="card-body">
+    <form method="get" action="{{ url_for('maintenance.schedules') }}" data-autosubmit>
+      <div class="filter-bar">
+        <div class="filter-field wide">
+          <label class="filter-label" for="{{ form.search.id }}">{{ form.search.label.text }}</label>
+          {{ form.search(class='form-control form-control-sm') }}
+        </div>
+        {{ filter_field(form.status) }}
+        {{ filter_field(form.department_id) }}
+        {{ filter_field(form.assigned_to) }}
+        {{ filter_field(form.date_from) }}
+        {{ filter_field(form.date_to) }}
+        <div class="filter-actions">
+          <button type="submit" class="btn btn-secondary btn-sm">Apply</button>
+          <a class="btn btn-ghost btn-sm" href="{{ url_for('maintenance.schedules') }}">Reset</a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2>All schedules</h2>
+    <span class="spacer"></span>
+    <span class="badge badge-info">{{ pagination.total }} record{{ '' if pagination.total == 1 else 's' }}</span>
+    {% if active_filters %}<span class="badge badge-warning">{{ active_filters }} filter{{ '' if active_filters == 1 else 's' }} applied</span>{% endif %}
+  </div>
+
+  {% if schedules %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Scheduled date</th><th>Equipment</th><th>Type</th>
+            <th>Assigned officer</th><th>Status</th><th>Completed</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for schedule in schedules %}
+            <tr>
+              <td class="nowrap"><a href="{{ url_for('maintenance.schedule_detail', schedule_id=schedule.id) }}">{{ schedule.scheduled_date|date_display }}</a>
+                <span class="cell-sub">
+                  {% if schedule.days_until < 0 %}{{ -schedule.days_until }} day{{ '' if schedule.days_until == -1 else 's' }} overdue
+                  {% elif schedule.days_until == 0 %}due today
+                  {% else %}in {{ schedule.days_until }} day{{ '' if schedule.days_until == 1 else 's' }}{% endif %}
+                </span>
+              </td>
+              <td>{{ schedule.equipment.asset_tag }}<span class="cell-sub">{{ schedule.equipment.equipment_name|truncate(30) }}</span></td>
+              <td>{{ schedule.maintenance_type }}</td>
+              <td>{{ schedule.assignee_name }}</td>
+              <td>{{ badge(schedule.status) }}</td>
+              <td class="nowrap">{{ schedule.completed_at|date_display }}</td>
+              <td><a class="btn btn-ghost btn-sm" href="{{ url_for('maintenance.schedule_detail', schedule_id=schedule.id) }}">Open</a></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {{ page_links(pagination, 'maintenance.schedules', filters) }}
+  {% else %}
+    <div class="card-body">
+      {{ empty_state("No preventive maintenance is scheduled.",
+                     "Schedules keep servicing on track and drive the overdue reminders on the dashboard.",
+                     url_for('maintenance.create_schedule') if current_user.can(PERMS.schedule_manage) else None,
+                     "Schedule servicing") }}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

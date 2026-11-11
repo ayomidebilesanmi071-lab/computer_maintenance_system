@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field, badge, detail_row, empty_state %}
+{% block title %}Schedule #{{ schedule.id }}{% endblock %}
+{% block page_title %}Schedule #{{ schedule.id }} · {{ schedule.equipment.asset_tag }}{% endblock %}
+{% block page_subtitle %}<p>{{ schedule.maintenance_type }} scheduled for {{ schedule.scheduled_date|date_display }}</p>{% endblock %}
+
+{% block page_actions %}
+  {% if current_user.can(PERMS.schedule_manage) and not schedule.is_completed %}
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('maintenance.edit_schedule', schedule_id=schedule.id) }}">Reschedule</a>
+  {% endif %}
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('maintenance.schedules') }}">Back to schedules</a>
+  <button type="button" class="btn btn-ghost btn-sm" data-print>Print</button>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-header">
+      <h2>Schedule information</h2>
+      <span class="spacer"></span>
+      {{ badge(schedule.status) }}
+    </div>
+    <div class="card-body">
+      <dl class="detail-list">
+        {{ detail_row("Equipment", schedule.equipment.asset_tag ~ " — " ~ schedule.equipment.equipment_name) }}
+        {{ detail_row("Department", schedule.equipment.department.name if schedule.equipment.department else "—") }}
+        {{ detail_row("Maintenance type", schedule.maintenance_type) }}
+        {{ detail_row("Scheduled date", schedule.scheduled_date|date_display) }}
+        {{ detail_row("Relative to today",
+              (-schedule.days_until ~ " days overdue") if schedule.days_until < 0
+              else ("due today" if schedule.days_until == 0 else (schedule.days_until ~ " days away"))) }}
+        {{ detail_row("Assigned officer", schedule.assignee_name) }}
+        {{ detail_row("Schedule status", schedule.status) }}
+        {{ detail_row("Completion date", schedule.completed_at|date_display) }}
+        {{ detail_row("Created by", schedule.creator.full_name if schedule.creator else "—") }}
+        {{ detail_row("Created on", schedule.created_at|date_display) }}
+      </dl>
+
+      <h3 class="mt-2">Instructions</h3>
+      <p>{{ schedule.instructions|nl2br if schedule.instructions else "—" }}</p>
+
+      <h3>Notes</h3>
+      <p class="mb-0">{{ schedule.notes|nl2br if schedule.notes else "—" }}</p>
+    </div>
+  </div>
+
+  <div>
+    {% if current_user.can(PERMS.schedule_manage) and not schedule.is_completed %}
+      <div class="card">
+        <div class="card-header"><h2>Complete this schedule</h2></div>
+        <div class="card-body">
+          <form method="post" action="{{ url_for('maintenance.complete_schedule', schedule_id=schedule.id) }}" novalidate>
+            {{ complete_form.hidden_tag() }}
+            {{ field(complete_form.maintenance_date) }}
+            {{ field(complete_form.outcome) }}
+            {{ field(complete_form.work_performed) }}
+            {{ field(complete_form.cost) }}
+            {{ field(complete_form.record_maintenance) }}
+            <div class="form-actions">
+              {{ complete_form.submit(class='btn btn-primary btn-sm') }}
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h2>Change schedule status</h2></div>
+        <div class="card-body">
+          <form method="post" action="{{ url_for('maintenance.schedule_status', schedule_id=schedule.id) }}" novalidate>
+            {{ status_form.hidden_tag() }}
+            {{ field(status_form.status) }}
+            {{ field(status_form.notes) }}
+            <div class="form-actions">
+              {{ status_form.submit(class='btn btn-secondary btn-sm',
+                   **{'data-confirm': 'Change the status of this schedule?'}) }}
+            </div>
+          </form>
+        </div>
+      </div>
+    {% elif schedule.is_completed %}
+      <div class="card">
+        <div class="card-body">
+          <p class="mb-0"><span class="badge badge-success">Completed</span>
+            This schedule was completed on {{ schedule.completed_at|date_display }}.</p>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if schedule.maintenance_record %}
+      <div class="card">
+        <div class="card-header"><h2>Maintenance record</h2></div>
+        <div class="card-body">
+          <dl class="detail-list">
+            {{ detail_row("Record", "#" ~ schedule.maintenance_record.id) }}
+            {{ detail_row("Date", schedule.maintenance_record.maintenance_date|date_display) }}
+            {{ detail_row("Technician", schedule.maintenance_record.technician_name) }}
+            {{ detail_row("Outcome", schedule.maintenance_record.outcome) }}
+            {{ detail_row("Cost", schedule.maintenance_record.cost|money) }}
+          </dl>
+          <a class="btn btn-ghost btn-sm" href="{{ url_for('maintenance.detail', record_id=schedule.maintenance_record.id) }}">View maintenance record</a>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-header"><h2>Audit entries</h2></div>
+      <div class="card-body">
+        {% if audit_entries %}
+          <ul class="timeline">
+            {% for entry in audit_entries %}
+              <li>
+                <span class="tl-title">{{ entry.description }}</span>
+                <time>{{ entry.timestamp|date_display }} · {{ entry.actor }} · {{ entry.action }}</time>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          {{ empty_state("No audit entries recorded for this schedule.") }}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

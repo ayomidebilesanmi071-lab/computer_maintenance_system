@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field %}
+{% block title %}Report a fault{% endblock %}
+{% block page_title %}Report a fault{% endblock %}
+{% block page_subtitle %}<p>Record a problem found on a piece of equipment. A reference number is generated automatically.</p>{% endblock %}
+
+{% block content %}
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-header">
+      <h2>Fault details</h2>
+      <span class="spacer"></span>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('faults.index') }}">Back to faults</a>
+    </div>
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data" novalidate>
+        {{ form.hidden_tag() }}
+
+        <fieldset>
+          <legend>Affected equipment</legend>
+          {{ field(form.equipment_id) }}
+        </fieldset>
+
+        <fieldset>
+          <legend>The problem</legend>
+          {{ field(form.fault_title) }}
+          {{ field(form.fault_description, hint="Describe what happens, what was tried, and any error messages.") }}
+          <div class="form-grid">
+            {{ field(form.fault_category) }}
+            {{ field(form.priority) }}
+            {{ field(form.date_discovered) }}
+            {{ field(form.assigned_to) }}
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Optional attachment</legend>
+          {{ field(form.attachment, hint="Screenshot or PDF, up to 2 MB. Optional — not required to report a fault.") }}
+        </fieldset>
+
+        <div class="form-actions">
+          {{ form.submit(class='btn btn-primary') }}
+          <a class="btn btn-ghost" href="{{ url_for('faults.index') }}">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>Guidance</h2></div>
+    <div class="card-body">
+      <h3>Choosing a priority</h3>
+      <ul class="small muted">
+        <li><strong>Critical</strong> — the equipment cannot be used and it blocks work (for example a server or the main switch).</li>
+        <li><strong>High</strong> — a user cannot do their job, and there is no workaround.</li>
+        <li><strong>Medium</strong> — work continues but is slowed or impaired.</li>
+        <li><strong>Low</strong> — cosmetic or minor inconvenience.</li>
+      </ul>
+      <h3 class="mt-2">What happens next</h3>
+      <p class="small muted mb-0">
+        The fault is recorded with the status <span class="badge badge-danger">Reported</span>.
+        An ICT officer acknowledges it, assigns it if needed, records the repair
+        in the maintenance history and then resolves and closes it. Every status
+        change is stored together with who made it and when.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

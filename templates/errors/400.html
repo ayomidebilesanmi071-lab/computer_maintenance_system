@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Invalid request{% endblock %}
+
+{% block content %}
+<div class="card error-page">
+  <div class="card-body">
+    <div class="error-code">400</div>
+    <h2>That request could not be processed</h2>
+    <p class="muted">
+      Something about the request was not valid — for example a filter value
+      that is not a number or a date, or a link that has been altered. Please go
+      back and try again.
+    </p>
+    <a class="btn btn-primary" href="{{ url_for('dashboard.index') }}">Back to dashboard</a>
+  </div>
+</div>
+{% endblock %}

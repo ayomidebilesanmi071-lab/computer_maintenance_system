@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field, detail_row %}
+{% block title %}My profile{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="muted mb-0">Your account details, role and recent activity.</p>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-header"><h2>Account</h2></div>
+    <div class="card-body">
+      <dl class="detail-list">
+        {{ detail_row("Full name", current_user.full_name) }}
+        {{ detail_row("Email address", current_user.email) }}
+        {{ detail_row("Role", ROLE_LABELS.get(current_user.role, current_user.role)) }}
+        {{ detail_row("Account status", "<span class='badge badge-success'>Active</span>"|safe if current_user.is_active else "<span class='badge badge-danger'>Deactivated</span>"|safe, raw=True) }}
+        {{ detail_row("Member since", current_user.created_at|date_display) }}
+        {{ detail_row("Permissions", current_user.role_object.permission_list|length ~ " granted") }}
+      </dl>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>Update profile</h2></div>
+    <div class="card-body">
+      <form method="post" novalidate>
+        {{ profile_form.hidden_tag() }}
+        {{ field(profile_form.full_name) }}
+        {{ field(profile_form.email) }}
+        <div class="form-actions">
+          {{ profile_form.submit(class='btn btn-primary') }}
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>Change password</h2></div>
+    <div class="card-body">
+      <form method="post" novalidate>
+        {{ password_form.hidden_tag() }}
+        {{ field(password_form.current_password) }}
+        {{ field(password_form.password, hint="At least 8 characters, mixing letters and numbers.") }}
+        {{ field(password_form.confirm_password) }}
+        <div class="form-actions">
+          {{ password_form.submit(class='btn btn-secondary') }}
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>Your recent activity</h2></div>
+    <div class="card-body">
+      {% if audit_entries %}
+        <ul class="timeline">
+          {% for entry in audit_entries %}
+            <li>
+              <span class="tl-title">{{ entry.description }}</span>
+              <time>{{ entry.timestamp|date_display }}</time>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted mb-0">No recorded activity yet.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

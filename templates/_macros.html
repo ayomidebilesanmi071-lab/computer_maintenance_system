@@ -1,0 +1,129 @@
+{# ---------------------------------------------------------------------------
+   Shared UI macros.  Keeping them here means every page renders fields,
+   badges, pagination and empty states identically - no copy-pasted markup.
+--------------------------------------------------------------------------- #}
+
+{# Render one WTForms field with its label, help text and validation errors. #}
+{% macro field(f, hint=None, class_extra='') %}
+  <div class="form-group {{ 'has-error' if f.errors }}">
+    {{ f.label(class='form-label') }}
+    {% if f.type == 'BooleanField' %}
+      <label class="checkbox">
+        {{ f(class='form-checkbox') }}
+        <span>{{ f.description or '' }}</span>
+      </label>
+    {% elif f.type == 'FileField' %}
+      {{ f(class='form-control-file') }}
+      {% if f.data %}<small class="form-hint">Current: {{ f.data }}</small>{% endif %}
+    {% else %}
+      {{ f(class='form-control ' ~ class_extra) }}
+    {% endif %}
+    {% if f.description and f.type != 'BooleanField' %}
+      <small class="form-hint">{{ f.description }}</small>
+    {% endif %}
+    {% if hint %}<small class="form-hint">{{ hint }}</small>{% endif %}
+    {% for error in f.errors %}
+      <small class="form-error">{{ error }}</small>
+    {% endfor %}
+  </div>
+{% endmacro %}
+
+{# Compact inline field used inside toolbar / filter rows. #}
+{% macro filter_field(f) %}
+  <div class="filter-field">
+    <label class="filter-label" for="{{ f.id }}">{{ f.label.text }}</label>
+    {{ f(class='form-control form-control-sm') }}
+  </div>
+{% endmacro %}
+
+{# A status / condition / priority chip. #}
+{% macro badge(value, text=None) %}
+  <span class="badge {{ value|badge }}">{{ text or value }}</span>
+{% endmacro %}
+
+{% macro yes_badge(flag, yes='Yes', no='No') %}
+  <span class="badge {{ 'badge-success' if flag else 'badge-secondary' }}">{{ yes if flag else no }}</span>
+{% endmacro %}
+
+{# A headline dashboard card. #}
+{% macro stat_card(label, value, hint=None, tone='primary', href=None) %}
+  {% if href %}<a class="stat-card tone-{{ tone }}" href="{{ href }}">{% else %}<div class="stat-card tone-{{ tone }}">{% endif %}
+    <div class="stat-value">{{ value }}</div>
+    <div class="stat-label">{{ label }}</div>
+    {% if hint %}<div class="stat-hint">{{ hint }}</div>{% endif %}
+  {% if href %}</a>{% else %}</div>{% endif %}
+{% endmacro %}
+
+{# Horizontal bar used for the simple CSS charts on the dashboards. #}
+{% macro bar(label, value, total, tone='primary') %}
+  {% set pct = (value / total * 100) if total else 0 %}
+  <div class="bar-row">
+    <span class="bar-label">{{ label }}</span>
+    <span class="bar-track"><span class="bar-fill tone-{{ tone }}" style="width: {{ '%.1f'|format(pct) }}%"></span></span>
+    <span class="bar-value">{{ value }}</span>
+  </div>
+{% endmacro %}
+
+{# Empty-state block used by every list. #}
+{% macro empty_state(message, hint=None, action_url=None, action_label=None) %}
+  <div class="empty-state">
+    <div class="empty-icon">⌗</div>
+    <p class="empty-message">{{ message }}</p>
+    {% if hint %}<p class="empty-hint">{{ hint }}</p>{% endif %}
+    {% if action_url %}
+      <a class="btn btn-primary btn-sm" href="{{ action_url }}">{{ action_label }}</a>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+{# Pagination footer (also repeats the total record count). #}
+{# ``filters`` carries the active filter values so paging keeps them. #}
+{% macro page_links(pagination, endpoint, filters={}) %}
+  {% if pagination.pages > 1 or pagination.total %}
+    <nav class="pagination" aria-label="Pagination">
+      <span class="pagination-summary">
+        Showing {{ pagination.items|length }} of {{ pagination.total }}
+        record{{ '' if pagination.total == 1 else 's' }}
+        {% if pagination.pages > 1 %}· page {{ pagination.page }} of {{ pagination.pages }}{% endif %}
+      </span>
+
+      {% if pagination.pages > 1 %}
+        <div class="pagination-controls">
+          {% if pagination.has_prev %}
+            <a class="page-link" href="{{ url_for(endpoint, page=pagination.prev_num, **filters) }}">‹ Prev</a>
+          {% else %}
+            <span class="page-link disabled">‹ Prev</span>
+          {% endif %}
+
+          {% for number in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if number %}
+              <a class="page-link {{ 'active' if number == pagination.page }}"
+                 href="{{ url_for(endpoint, page=number, **filters) }}">{{ number }}</a>
+            {% else %}
+              <span class="page-link disabled">…</span>
+            {% endif %}
+          {% endfor %}
+
+          {% if pagination.has_next %}
+            <a class="page-link" href="{{ url_for(endpoint, page=pagination.next_num, **filters) }}">Next ›</a>
+          {% else %}
+            <span class="page-link disabled">Next ›</span>
+          {% endif %}
+        </div>
+      {% endif %}
+    </nav>
+  {% endif %}
+{% endmacro %}
+
+{# Confirmation-friendly destructive button. #}
+{% macro confirm_button(label, message, class_name='btn btn-ghost btn-sm') %}
+  <button type="submit" class="{{ class_name }}" data-confirm="{{ message }}">{{ label }}</button>
+{% endmacro %}
+
+{# Two-column definition list used on every detail page. #}
+{% macro detail_row(label, value, raw=False) %}
+  <div class="detail-row">
+    <dt>{{ label }}</dt>
+    <dd>{% if raw %}{{ value }}{% else %}{{ value if value not in [None, ''] else '—' }}{% endif %}</dd>
+  </div>
+{% endmacro %}

@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field, detail_row, badge %}
+{% block title %}{{ 'Edit account' if user else 'Add user account' }}{% endblock %}
+{% block page_title %}{{ 'Edit account · ' ~ user.full_name if user else 'Add user account' }}{% endblock %}
+
+{% block content %}
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-header">
+      <h2>Account details</h2>
+      <span class="spacer"></span>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.users') }}">Back to accounts</a>
+    </div>
+    <div class="card-body">
+      <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+        {{ field(form.full_name) }}
+        {{ field(form.email) }}
+        {{ field(form.role) }}
+        {{ field(form.password,
+                 hint=('Leave blank to keep the current password.' if user else 'At least 8 characters, mixing letters and numbers.')) }}
+        {{ field(form.confirm_password) }}
+        <div class="form-actions">
+          {{ form.submit(class='btn btn-primary') }}
+          <a class="btn btn-ghost" href="{{ url_for('admin.users') }}">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>Role permissions</h2></div>
+    <div class="card-body">
+      <h3>Administrator</h3>
+      <p class="small muted">Full access: users, departments, equipment types, all records, reports and the audit trail.</p>
+      <h3>ICT Officer</h3>
+      <p class="small muted">Registers equipment, reports and manages faults, records maintenance, manages schedules and exports reports.</p>
+      <h3>Viewer</h3>
+      <p class="small muted">Read-only access to equipment, faults, maintenance, schedules and reports. No create, edit or export rights.</p>
+      <p class="small muted mb-0">
+        Permissions are enforced on the server for every request — hiding a
+        button in the interface is never relied on for security.
+      </p>
+    </div>
+  </div>
+
+  {% if user %}
+    <div class="card">
+      <div class="card-header"><h2>Account record</h2></div>
+      <div class="card-body">
+        <dl class="detail-list">
+          {{ detail_row("Account ID", user.id) }}
+          {{ detail_row("Full name", user.full_name) }}
+          {{ detail_row("Email address", user.email) }}
+          {{ detail_row("Role", user.role_label) }}
+          {{ detail_row("Account status", "Active" if user.is_active else "Deactivated") }}
+          {{ detail_row("Created", user.created_at|date_display) }}
+          {{ detail_row("Last updated", user.updated_at|date_display) }}
+          {{ detail_row("Registered equipment", user.registered_equipment|length) }}
+          {{ detail_row("Faults reported", user.reported_faults|length) }}
+          {{ detail_row("Faults assigned", user.assigned_faults|length) }}
+          {{ detail_row("Maintenance performed", user.maintenance_performed|length) }}
+        </dl>
+        {% if user.is_active %}
+          <form method="post" action="{{ url_for('admin.deactivate_user', user_id=user.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-danger btn-sm"
+                    data-confirm="Deactivate {{ user.full_name }}? They will immediately lose access.">
+              Deactivate account
+            </button>
+          </form>
+        {% else %}
+          <form method="post" action="{{ url_for('admin.activate_user', user_id=user.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-primary btn-sm">Reactivate account</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
